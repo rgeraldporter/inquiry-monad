@@ -1,6 +1,6 @@
 {
   "name": "inquiry-monad",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "",
   "main": "built/index.js",
   "scripts": {
@@ -22,7 +22,9 @@
     "@types/ramda": "0.25.24",
     "jasmine": "3.1.0",
     "ramda": "0.25.0",
-    "ts-node": "6.0.0",
+    "ts-node": "6.0.0"
+  },
+  "dependencies": {
     "typescript": "2.8.3"
   }
 }
