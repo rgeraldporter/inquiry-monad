@@ -13,7 +13,33 @@ const hasRecords = () => Pass([{ records: [1, 2, 3] }]);
 const mathGrade = () => Fail(["Failed at math"]);
 
 describe("The module", () => {
-    it("should be able to make many checks", () => {
+    it("should be able to make many checks and run a cohort", () => {
+        const result = (Inquiry as any)
+            .of({ name: "test", age: 10, description: "blah" })
+            .inquire(oldEnough)
+            .inquire(findHeight)
+            .inquire(nameSpelledRight)
+            .inquire(hasRecords)
+            .inquire(mathGrade)
+            .cohort(
+                (x: FailMonad) => {
+                    expect(x.inspect()).toBe(
+                        "Fail(not old enough,Name wasn't spelled correctly,Failed at math)"
+                    );
+                    return x.join();
+                },
+                (y: PassMonad) => {
+                    expect(y.inspect()).toBe(
+                        "Pass([object Object],[object Object])"
+                    );
+                    return y.join();
+                }
+            );
+
+        expect(result.pass[0].height).toBe(110);
+    });
+
+    it("should be able to make many checks and run a fork", () => {
         const result = (Inquiry as any)
             .of({ name: "test", age: 10, description: "blah" })
             .inquire(oldEnough)
@@ -30,12 +56,10 @@ describe("The module", () => {
                 },
                 (y: PassMonad) => {
                     expect(y.inspect()).toBe(
-                        "Pass([object Object],[object Object])"
+                        "this should not run"
                     );
                     return y.join();
                 }
             );
-
-        expect(result.pass[0].height).toBe(110);
     });
 });

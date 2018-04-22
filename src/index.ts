@@ -43,6 +43,10 @@ const Inquiry = (x: Inquiry) => ({
             fail: Fail(x.pass.join()),
             pass: Pass(x.fail.join())
         }),
+    unison: (
+        f: Function
+    ): InquiryMonad => // apply map to both (e.g. sort?)
+        Inquiry({ fail: Fail(f(x.fail)), pass: Pass(f(x.pass)) }),
     inspect: (): string => `Inquiry(${x.fail.inspect()} ${x.pass.inspect()}`,
     map: (f: Function): Inquiry => (Inquiry as any).of(f(x)), // cast required for now
     ap: (y: Monad) => y.map(x),
@@ -50,19 +54,22 @@ const Inquiry = (x: Inquiry) => ({
 
     // unwraps : Fork and Fold may need renaming as they don't act as you'd expect.
     // because they will run BOTH tracks
-    fold: (f: Function, g: Function): Inquiry => ({
-        pass: f(x.pass),
-        fail: g(x.fail)
-    }),
-    fork: (f: Function, g: Function): Inquiry => ({
+    // thoughts: for Fork to be consistent, it should only run Left when Fails
+    // and fold should do the opposite
+    // another type is needed: both or forkmap or 2map bothmap tuplemap branch co-something co
+    fold: (f: Function, g: Function): any =>
+        x.fail.join().length ? g(x.fail) : f(x.pass),
+    fork: (f: Function, g: Function): any =>
+        x.fail.join().length ? f(x.fail) : g(x.pass),
+    cohort: (f: Function, g: Function): Inquiry => ({
         fail: f(x.fail),
         pass: g(x.pass)
     }),
     zip: (f: Function): Array<any> => f(x.fail.join().concat(x.pass.join())), // bring together
-    join: (): any => x
+    join: (): Inquiry => x
 });
 
 Inquiry.constructor.prototype["of"] = (x: any) =>
     R.prop("isInquiry", x) ? x : Inquiry({ fail: Fail([]), pass: Pass([]) });
 
-export {Inquiry, Fail, Pass};
+export { Inquiry, Fail, Pass };
