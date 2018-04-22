@@ -1,0 +1,28 @@
+{
+  "name": "inquiry-monad",
+  "version": "0.1.0",
+  "description": "",
+  "main": "built/index.js",
+  "scripts": {
+    "test": "find ./built -name '*.spec.js' | NODE_ENV=test xargs node ./node_modules/jasmine/bin/jasmine.js",
+    "build": "node ./node_modules/typescript/bin/tsc",
+    "postinstall": "npm run build"
+  },
+  "keywords": [
+    "monad",
+    "inquiry",
+    "validation",
+    "left",
+    "right"
+  ],
+  "author": "Rob Porter <rob@inpictures.ca>",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/jasmine": "2.8.6",
+    "@types/ramda": "0.25.24",
+    "jasmine": "3.1.0",
+    "ramda": "0.25.0",
+    "ts-node": "6.0.0",
+    "typescript": "2.8.3"
+  }
+}
