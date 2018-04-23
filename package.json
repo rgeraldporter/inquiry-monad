@@ -1,12 +1,11 @@
 {
   "name": "inquiry-monad",
-  "version": "0.2.1",
+  "version": "0.3.0",
   "description": "",
   "main": "built/index.js",
   "scripts": {
     "test": "find ./built -name '*.spec.js' | NODE_ENV=test xargs node ./node_modules/jasmine/bin/jasmine.js",
-    "build": "node ./node_modules/typescript/bin/tsc",
-    "postinstall": "npm run build"
+    "build": "node ./node_modules/typescript/bin/tsc"
   },
   "keywords": [
     "monad",
@@ -22,9 +21,10 @@
     "@types/ramda": "0.25.24",
     "jasmine": "3.1.0",
     "ramda": "0.25.0",
-    "ts-node": "6.0.0"
+    "ts-node": "6.0.0",
+    "typescript": "2.8.3"
   },
   "dependencies": {
-    "typescript": "2.8.3"
+    "simple-maybe": "0.1.2"
   }
 }

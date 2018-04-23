@@ -1,3 +1,5 @@
+declare module 'simple-maybe'
+
 interface Monad {
     map: Function;
     chain: Function;
@@ -26,6 +28,7 @@ interface FailMonad extends PassFailMonad {
 }
 
 interface Inquiry {
+    subject: any;
     fail: FailMonad;
     pass: PassMonad;
     of?: Function;
