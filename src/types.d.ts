@@ -14,7 +14,8 @@ interface PassFailMonad extends Monad {
     concat: Function;
     isPass: boolean;
     isFail: boolean;
-    isInquiry: true;
+    isInquiry: false;
+    answer: Function;
 }
 
 interface PassMonad extends PassFailMonad {
@@ -31,6 +32,7 @@ interface Inquiry {
     subject: any;
     fail: FailMonad;
     pass: PassMonad;
+    informant: Function;
     of?: Function;
 }
 

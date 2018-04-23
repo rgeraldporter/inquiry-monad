@@ -17,13 +17,14 @@ describe("The module", () => {
     it("should be able to make many checks and run a cohort and return the subject unchanged", () => {
         const result = (Inquiry as any)
             .of({ name: "test", age: 10, description: "blah" })
+            .informant((x: any) => console.log(x))
             .inquire(oldEnough)
             .inquire(findHeight)
             .inquire(nameSpelledRight)
             .inquire(hasRecords)
             .inquire(mathGrade)
             .cohort(
-                (x: FailMonad) => {
+                (x: any) => {
                     expect(x.inspect()).toBe(
                         "Fail(not old enough,Name wasn't spelled correctly,Failed at math)"
                     );
