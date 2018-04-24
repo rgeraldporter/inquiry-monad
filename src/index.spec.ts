@@ -65,4 +65,36 @@ describe("The module", () => {
                 }
             );
     });
+
+    it("should be able to merge a sub-inquiry into a master inquiry", () => {
+
+        const evaluateHealth = (a: any) =>
+            (Inquiry as any).of(a)
+                .inquire(() => Pass('Passed something'))
+                .inquire(() => Fail('Failed something'))
+                .inquire(() => Fail('Failed something else'));
+
+        const result = (Inquiry as any)
+            .of({ name: "test", age: 14, description: "blah" })
+            .inquire(oldEnough)
+            .inquire(findHeight)
+            .inquire(nameSpelledRight)
+            .inquire(hasRecords)
+            .inquire(mathGrade)
+            .inquire(evaluateHealth)
+            .cohort(
+                (x: any) => {
+                    expect(x.inspect()).toBe(
+                        "Fail(Name wasn't spelled correctly,Failed at math,Failed something,Failed something else)"
+                    );
+                    return x.join();
+                },
+                (y: PassMonad) => {
+                    expect(y.inspect()).toBe(
+                        "Pass(old enough,[object Object],[object Object],Passed something)"
+                    );
+                    return y.join();
+                }
+            );
+    });
 });

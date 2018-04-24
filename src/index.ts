@@ -49,7 +49,7 @@ const Fail = (x: any): FailMonad => ({
 
 const Inquiry = (x: Inquiry) => ({
     inquire: (f: Function) => f(x.subject.join()).answer(x, f.name),
-    informant: (f: Function) => Inquiry({
+    informant: (f: Function) => Inquiry({ // @todo accept array of functions instead, or have a plural version
         subject: x.subject,
         fail: Fail(x.pass.join()),
         pass: Pass(x.fail.join()),
@@ -76,6 +76,16 @@ const Inquiry = (x: Inquiry) => ({
     ap: (y: Monad) => y.map(x),
     chain: (f: Function) => f(x),
 
+    answer: (i: Inquiry, n: string) => {
+        i.informant([n, Inquiry(x)]);
+        return Inquiry({
+            subject: i.subject,
+            fail: i.fail.concat(x.fail),
+            pass: i.pass.concat(x.pass),
+            informant: i.informant
+        });
+    },
+
     // unwraps with complete value
     cohort: (f: Function, g: Function): Inquiry => ({
         subject: x.subject,
@@ -85,7 +95,6 @@ const Inquiry = (x: Inquiry) => ({
     }),
     join: (): Inquiry => x,
 
-    // unwraps with only Fail & Pass data, might deprecate?
     fork: (f: Function, g: Function): any =>
         x.fail.join().length ? f(x.fail) : g(x.pass),
     fold: (f: Function, g: Function): any =>
