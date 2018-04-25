@@ -18,6 +18,10 @@ interface PassFailMonad extends Monad {
     answer: Function;
 }
 
+interface IOUMonad extends Monad {
+    concat: Function;
+}
+
 interface PassMonad extends PassFailMonad {
     isPass: true;
     isFail: false;

@@ -1,7 +1,7 @@
 import R from "ramda";
 import { Maybe } from "simple-maybe";
 
-const IOU = (x: any): Monad => ({
+const IOU = (x: any): IOUMonad => ({
     map: (f: Function) => IOU(f(x)),
     chain: (f: Function) => f(x),
     ap: (y: Monad) => y.map(x),
@@ -59,6 +59,7 @@ const Fail = (x: any): FailMonad => ({
 });
 
 const Inquiry = (x: Inquiry) => ({
+    // @todo handle when an f() in inquire does not return a monad correctly
     inquire: (f: Function) => f(x.subject.join()).answer(x, f.name),
     inquireP: (f: Function) =>
         Inquiry({
@@ -99,6 +100,13 @@ const Inquiry = (x: Inquiry) => ({
     map: (f: Function): Inquiry => (Inquiry as any).of(f(x)), // cast required for now
     ap: (y: Monad) => y.map(x),
     chain: (f: Function) => f(x),
+
+    // opportunity to exit early, or adjust and continue
+    breakpoint: (f: Function) => x.fail.join().length ? f(x) : Inquiry(x),
+    milestone: (f: Function) => x.pass.join().length ? f(x) : Inquiry(x),
+
+    // need something that does the same for pass branch ?
+    // milestone vs breakpoint?
 
     answer: (i: Inquiry, n: string) => {
         i.informant([n, Inquiry(x)]);

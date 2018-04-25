@@ -59,12 +59,13 @@ describe("The module", () => {
         expect(associativity1.join()).toEqual(associativity2.join());
     });
 
-    it("should be able to make many checks and run a cohort and return the subject unchanged", () => {
+    it("should be able to make many checks, including async ones, and run a cohort and return the subject unchanged", () => {
+
         return (Inquiry as any)
             .subject({ name: "test", age: 10, description: "blah" })
             .inquire(oldEnough)
-            .inquireP(resolveAfter2Seconds)
             .inquire(findHeight)
+            .inquireP(resolveAfter2Seconds)
             .inquire(nameSpelledRight)
             .inquire(hasRecords)
             .inquire(mathGrade)
@@ -73,15 +74,19 @@ describe("The module", () => {
                     expect(x.inspect()).toBe(
                         "Fail(not old enough,Name wasn't spelled correctly,Failed at math)"
                     );
-                    return x.join();
+                    return x;
                 },
                 (y: PassMonad) => {
                     expect(y.inspect()).toBe(
                         "Pass([object Object],[object Object],passed)"
                     );
-                    return y.join();
+                    return y;
                 }
-            );
+            )
+            .then((x: any) => {
+                expect(x.subject.join()).toEqual({ name: "test", age: 10, description: "blah" });
+                expect(R.head(x.pass.join())).toEqual({ height: 110, in: "cm" });
+            })
     });
 
     it("should be able to make many checks and run a fork", () => {
@@ -134,6 +139,88 @@ describe("The module", () => {
                 (y: PassMonad) => {
                     expect(y.inspect()).toBe(
                         "Pass(old enough,[object Object],[object Object],Passed something)"
+                    );
+                    return y.join();
+                }
+            );
+    });
+
+    it("should be able to be stopped in the middle of processing with a breakpoint if there are failures", () => {
+
+        const evaluateHealth = (a: any) =>
+            (Inquiry as any).subject(a)
+                .inquire(() => Pass('Passed something'))
+                .inquire(() => Fail('Failed something'))
+                .inquire(() => Fail('Failed something else'));
+
+        let reachedBreakpoint = 0;
+
+        const result = (Inquiry as any)
+            .subject({ name: "test", age: 11, description: "blah" })
+            .inquire(oldEnough)
+            .breakpoint((x: any) => {
+
+                // clearing the existing failure, it will not appear at the end
+                // this is not a practice example, usually one one do some kind of exit
+                x.fail = Fail([]);
+                return Inquiry(x);
+            })
+            .inquire(findHeight)
+            .inquire(nameSpelledRight)
+            .inquire(hasRecords)
+            .inquire(mathGrade)
+            .inquire(evaluateHealth)
+            .cohort(
+                (x: any) => {
+                    expect(x.inspect()).toBe(
+                        "Fail(Name wasn't spelled correctly,Failed at math,Failed something,Failed something else)"
+                    );
+                    return x.join();
+                },
+                (y: PassMonad) => {
+                    expect(y.inspect()).toBe(
+                        "Pass([object Object],[object Object],Passed something)"
+                    );
+                    return y.join();
+                }
+            );
+    });
+
+    it("should be able to be stopped in the middle of processing with a milestone if there are passes", () => {
+
+        const evaluateHealth = (a: any) =>
+            (Inquiry as any).subject(a)
+                .inquire(() => Pass('Passed something'))
+                .inquire(() => Fail('Failed something'))
+                .inquire(() => Fail('Failed something else'));
+
+        let reachedBreakpoint = 0;
+
+        const result = (Inquiry as any)
+            .subject({ name: "test", age: 11, description: "blah" })
+            .inquire(oldEnough)
+            .milestone((x: any) => {
+
+                // clearing the existing failure, it will not appear at the end
+                // this is not a practice example, usually one one do some kind of exit
+                x.pass = Pass([]);
+                return Inquiry(x);
+            })
+            .inquire(findHeight)
+            .inquire(nameSpelledRight)
+            .inquire(hasRecords)
+            .inquire(mathGrade)
+            .inquire(evaluateHealth)
+            .cohort(
+                (x: any) => {
+                    expect(x.inspect()).toBe(
+                        "Fail(not old enough,Name wasn't spelled correctly,Failed at math,Failed something,Failed something else)"
+                    );
+                    return x.join();
+                },
+                (y: PassMonad) => {
+                    expect(y.inspect()).toBe(
+                        "Pass([object Object],[object Object],Passed something)"
                     );
                     return y.join();
                 }
