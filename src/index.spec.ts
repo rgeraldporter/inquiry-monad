@@ -61,7 +61,7 @@ describe("The module", () => {
 
     it("should be able to make many checks and run a cohort and return the subject unchanged", () => {
         return (Inquiry as any)
-            .of({ name: "test", age: 10, description: "blah" })
+            .subject({ name: "test", age: 10, description: "blah" })
             .inquire(oldEnough)
             .inquireP(resolveAfter2Seconds)
             .inquire(findHeight)
@@ -86,7 +86,7 @@ describe("The module", () => {
 
     it("should be able to make many checks and run a fork", () => {
         const result = (Inquiry as any)
-            .of({ name: "test", age: 14, description: "blah" })
+            .subject({ name: "test", age: 14, description: "blah" })
             .inquire(oldEnough)
             .inquire(findHeight)
             .inquire(nameSpelledRight)
@@ -111,13 +111,13 @@ describe("The module", () => {
     it("should be able to merge a sub-inquiry into a master inquiry", () => {
 
         const evaluateHealth = (a: any) =>
-            (Inquiry as any).of(a)
+            (Inquiry as any).subject(a)
                 .inquire(() => Pass('Passed something'))
                 .inquire(() => Fail('Failed something'))
                 .inquire(() => Fail('Failed something else'));
 
         const result = (Inquiry as any)
-            .of({ name: "test", age: 14, description: "blah" })
+            .subject({ name: "test", age: 14, description: "blah" })
             .inquire(oldEnough)
             .inquire(findHeight)
             .inquire(nameSpelledRight)

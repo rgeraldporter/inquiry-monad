@@ -144,6 +144,8 @@ const Inquiry = (x: Inquiry) => ({
     //@todo determine if we could zip "in order of tests"
 });
 
+// really this should be "ofSubject" and "of" would just be our pointed constructor
+// ideas: Inquiry.subject()
 Inquiry.constructor.prototype["of"] = (x: any) =>
     R.prop("isInquiry", x)
         ? x
@@ -154,5 +156,7 @@ Inquiry.constructor.prototype["of"] = (x: any) =>
               iou: IOU([]),
               informant: (_: any) => _
           });
+
+Inquiry.constructor.prototype["subject"] = Inquiry.of;
 
 export { Inquiry, Fail, Pass };

@@ -4,12 +4,12 @@
 Experiment with aggregate Left/Right monad running parallel. More details when it is better fleshed out.
 
 ```
-const subject = {
+const subjectData = {
     a: 1,
     b: false
 };
 
-Inquiry.of(subject)
+Inquiry.subject(subjectData)
     .informant(console.log)
     .inquire(hasA)
     .inquire(retrieveC)
