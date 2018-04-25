@@ -22,6 +22,14 @@ function resolveAfter2Seconds(x: any) {
     });
 }
 
+function resolveAfter1Second(x: any) {
+    return new Promise(resolve => {
+        setTimeout(() => {
+            resolve(Pass("passed"));
+        }, 1000);
+    });
+}
+
 describe("The module", () => {
     // note that while these pass, to use this monad as intended
     // one should never call Inquiry() directly
@@ -59,7 +67,7 @@ describe("The module", () => {
         expect(associativity1.join()).toEqual(associativity2.join());
     });
 
-    it("should be able to make many checks, including async ones, and run a cohort and return the subject unchanged", () => {
+    it("should be able to make many checks, including async ones, and run a conclude and return the subject unchanged", () => {
         return (Inquiry as any)
             .subject({ name: "test", age: 10, description: "blah" })
             .inquire(oldEnough)
@@ -68,7 +76,7 @@ describe("The module", () => {
             .inquire(nameSpelledRight)
             .inquire(hasRecords)
             .inquire(mathGrade)
-            .cohort(
+            .conclude(
                 (x: any) => {
                     expect(x.inspect()).toBe(
                         "Fail(not old enough,Name wasn't spelled correctly,Failed at math)"
@@ -133,7 +141,7 @@ describe("The module", () => {
             .inquire(hasRecords)
             .inquire(mathGrade)
             .inquire(evaluateHealth)
-            .cohort(
+            .conclude(
                 (x: any) => {
                     expect(x.inspect()).toBe(
                         "Fail(Name wasn't spelled correctly,Failed at math,Failed something,Failed something else)"
@@ -173,7 +181,7 @@ describe("The module", () => {
             .inquire(hasRecords)
             .inquire(mathGrade)
             .inquire(evaluateHealth)
-            .cohort(
+            .conclude(
                 (x: any) => {
                     expect(x.inspect()).toBe(
                         "Fail(Name wasn't spelled correctly,Failed at math,Failed something,Failed something else)"
@@ -217,7 +225,7 @@ describe("The module", () => {
             .inquire(hasRecords)
             .inquire(mathGrade)
             .inquire(evaluateHealth)
-            .cohort(
+            .conclude(
                 (x: any) => {
                     expect(x.inspect()).toBe(
                         "Fail(not old enough,Name wasn't spelled correctly,Failed at math,Failed something,Failed something else)"
@@ -229,6 +237,42 @@ describe("The module", () => {
                         "Pass([object Object],[object Object],Passed something)"
                     );
                     return y.join();
+                }
+            );
+    });
+
+    it("should be able to make many checks, including async ones, and run a faulted unwrap", () => {
+        return (Inquiry as any)
+            .subject({ name: "test", age: 10, description: "blah" })
+            .inquire(oldEnough)
+            .inquire(findHeight)
+            .inquireP(resolveAfter1Second)
+            .inquire(nameSpelledRight)
+            .inquire(hasRecords)
+            .inquire(mathGrade)
+            .faulted(
+                (x: any) => {
+                    expect(x.inspect()).toBe(
+                        "Fail(not old enough,Name wasn't spelled correctly,Failed at math)"
+                    );
+                    return x;
+                }
+            );
+    });
+
+    it("should be able to make many checks, including async ones, and run a cleared unwrap when all passes", () => {
+        return (Inquiry as any)
+            .subject({ name: "test", age: 14, description: "blah" })
+            .inquire(oldEnough)
+            .inquire(findHeight)
+            .inquireP(resolveAfter1Second)
+            .inquire(hasRecords)
+            .faulted(
+                (x: any) => {
+                    expect(x.inspect()).toBe(
+                        "Fail(not old enough,Name wasn't spelled correctly,Failed at math)"
+                    );
+                    return x;
                 }
             );
     });

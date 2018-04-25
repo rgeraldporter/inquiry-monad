@@ -8,8 +8,9 @@ const IOU = (x: any): IOUMonad => ({
     inspect: () => <string>`IOU(${x})`,
     join: () => x,
     concat: (o: Monad) => o.chain((r: any) => IOU(x.concat(r))),
-    head: () => x.length ? x[0] : [],
-    tail: () => x.length ? x[x.length - 1] : []
+    head: () => (x.length ? x[0] : []),
+    tail: () => (x.length ? x[x.length - 1] : []),
+    isEmpty: () => Boolean(!x.length)
 });
 
 const Pass = (x: any): PassMonad => ({
@@ -17,8 +18,8 @@ const Pass = (x: any): PassMonad => ({
     chain: (f: Function) => f(x),
     fold: (f: Function, _: Function) => f(x),
     fork: (_: Function, f: Function) => f(x),
-    head: () => x.length ? x[0] : [],
-    tail: () => x.length ? x[x.length - 1] : [],
+    head: () => (x.length ? x[0] : []),
+    tail: () => (x.length ? x[x.length - 1] : []),
     join: () => x,
     inspect: () => <string>`Pass(${x})`,
     concat: (o: PassFailMonad) => o.fold((r: any) => Pass(x.concat(r)), null),
@@ -33,6 +34,7 @@ const Pass = (x: any): PassMonad => ({
             informant: i.informant
         });
     },
+    isEmpty: () => Boolean(!x.length),
     isPass: true,
     isFail: false,
     isInquiry: false
@@ -43,8 +45,8 @@ const Fail = (x: any): FailMonad => ({
     chain: (f: Function) => f(x),
     fold: (_: Function, f: Function) => f(x),
     fork: (f: Function, _: Function) => f(x),
-    head: () => x.length ? x[0] : [],
-    tail: () => x.length ? x[x.length - 1] : [],
+    head: () => (x.length ? x[0] : []),
+    tail: () => (x.length ? x[x.length - 1] : []),
     join: () => x,
     inspect: () => <string>`Fail(${x})`,
     concat: (o: PassFailMonad) => o.fork((r: any) => Fail(x.concat(r)), null),
@@ -59,6 +61,7 @@ const Fail = (x: any): FailMonad => ({
             informant: i.informant
         });
     },
+    isEmpty: () => Boolean(!x.length),
     isPass: false,
     isFail: true,
     isInquiry: false
@@ -124,34 +127,64 @@ const Inquiry = (x: Inquiry) => ({
     },
 
     // unwraps with complete value
-    // @todo deal with IOUs
-    cohort: (f: Function, g: Function): any => {
-        // IF there was Promises. Need to deal with what if there were not
-        // then deal with what if they were Futures
+    conclude: (f: Function, g: Function): any => {
         // @ todo: resolve Promises, nodebacks, Futures
         // then run unwrapper
-        // ideally if no "P" or "F" functions are called, this can all still be sync
 
         const buildInq = (vals: Array<any>) =>
             vals.reduce((acc, cur) => cur.answer(x, "reduced"), x);
 
-        return Promise.all(x.iou.join())
-            .then(buildInq)
-            .then(i => (i.isInquiry ? i.join() : i))
-            .then(y => ({
-                subject: y.subject,
-                iou: y.iou,
-                fail: f(y.fail),
-                pass: g(y.pass),
-                informant: y.informant
-            }));
+        // lets not go async if we can help it
+        return x.iou.isEmpty()
+            ? {
+                  subject: x.subject,
+                  iou: x.iou,
+                  fail: f(x.fail),
+                  pass: g(x.pass),
+                  informant: x.informant
+              }
+            : Promise.all(x.iou.join())
+                  .then(buildInq)
+                  .then(i => (i.isInquiry ? i.join() : i))
+                  .then(y => ({
+                      subject: y.subject,
+                      iou: y.iou,
+                      fail: f(y.fail),
+                      pass: g(y.pass),
+                      informant: y.informant
+                  }));
+    },
+    cleared: (f: Function): any => {
+        const buildInq = (vals: Array<any>) =>
+            vals.reduce((acc, cur) => cur.answer(x, "reduced"), x);
+
+        const clearNow = () => (x.fail.isEmpty() ? f(x.pass) : Inquiry(x));
+
+        // can't do .faulted if returning a Promise
+        return x.iou.isEmpty()
+            ? clearNow()
+            : Promise.all(x.iou.join())
+                  .then(buildInq)
+                  .then(i => (i.isInquiry ? i.join() : i))
+                  .then(y => (y.fail.isEmpty() ? f(y.pass) : Inquiry(x)))
+                  .catch(err => console.error("err", err));
+    },
+    faulted: (f: Function): any => {
+        const buildInq = (vals: Array<any>) =>
+            vals.reduce((acc, cur) => cur.answer(x, "reduced"), x);
+
+        return x.iou.isEmpty()
+            ? x.fail.isEmpty()
+                ? Inquiry(x)
+                : f(x.fail)
+            : Promise.all(x.iou.join())
+                  .then(buildInq)
+                  .then(i => (i.isInquiry ? i.join() : i))
+                  .then(y => (y.fail.isEmpty() ? Inquiry(x) : f(x.fail)));
     },
     join: (): Inquiry => x,
-
     fork: (f: Function, g: Function): any =>
         x.fail.join().length ? f(x.fail) : g(x.pass),
-    fold: (f: Function, g: Function): any =>
-        x.fail.join().length ? g(x.fail) : f(x.pass),
     zip: (f: Function): Array<any> => f(x.fail.join().concat(x.pass.join())), // return a concat of pass/fails
     isInquiry: true
     //@todo determine if we could zip "in order of tests"

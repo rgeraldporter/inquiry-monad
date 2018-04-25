@@ -18,12 +18,14 @@ interface PassFailMonad extends Monad {
     answer: Function;
     head: Function;
     tail: Function;
+    isEmpty: Function;
 }
 
 interface IOUMonad extends Monad {
     concat: Function;
     head: Function;
     tail: Function;
+    isEmpty: Function;
 }
 
 interface PassMonad extends PassFailMonad {
@@ -49,6 +51,7 @@ interface InquiryMonad extends Monad {
     inquire: Function;
     zip: Function;
     swap: Function;
-    fold: Function;
     fork: Function;
+    faulted: Function;
+    cleared: Function;
 }
