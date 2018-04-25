@@ -13,12 +13,22 @@ const nameSpelledRight = (a: any) =>
 const hasRecords = () => Pass([{ records: [1, 2, 3] }]);
 const mathGrade = () => Fail(["Failed at math"]);
 
+function resolveAfter2Seconds(x: any) {
+    return new Promise(resolve => {
+        setTimeout(() => {
+            resolve(Pass("passed"));
+        }, 2000);
+    });
+}
+
+
 describe("The module", () => {
     it("should be able to make many checks and run a cohort and return the subject unchanged", () => {
-        const result = (Inquiry as any)
+        return (Inquiry as any)
             .of({ name: "test", age: 10, description: "blah" })
             .informant((x: any) => console.log(x))
             .inquire(oldEnough)
+            .inquireP(resolveAfter2Seconds)
             .inquire(findHeight)
             .inquire(nameSpelledRight)
             .inquire(hasRecords)
@@ -32,14 +42,11 @@ describe("The module", () => {
                 },
                 (y: PassMonad) => {
                     expect(y.inspect()).toBe(
-                        "Pass([object Object],[object Object])"
+                        "Pass([object Object],[object Object],passed)"
                     );
                     return y.join();
                 }
             );
-
-        expect(result.pass[0].height).toBe(110);
-        expect(result.subject.join()).toEqual({ name: "test", age: 10, description: "blah" });
     });
 
     it("should be able to make many checks and run a fork", () => {

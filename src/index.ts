@@ -1,6 +1,15 @@
 import R from "ramda";
 import { Maybe } from "simple-maybe";
 
+const IOU = (x: any): Monad => ({
+    map: (f: Function) => IOU(f(x)),
+    chain: (f: Function) => f(x),
+    ap: (y: Monad) => y.map(x),
+    inspect: () => <string>`IOU(${x})`,
+    join: () => x,
+    concat: (o: Monad) => o.chain((r: any) => IOU(x.concat(r)))
+});
+
 const Pass = (x: any): PassMonad => ({
     map: (f: Function) => Pass(f(x)),
     chain: (f: Function) => f(x),
@@ -15,6 +24,7 @@ const Pass = (x: any): PassMonad => ({
         return Inquiry({
             subject: i.subject,
             fail: i.fail,
+            iou: i.iou,
             pass: i.pass.concat(Pass(x)),
             informant: i.informant
         });
@@ -39,6 +49,7 @@ const Fail = (x: any): FailMonad => ({
             subject: i.subject,
             fail: i.fail.concat(Fail(x)),
             pass: i.pass,
+            iou: i.iou,
             informant: i.informant
         });
     },
@@ -49,15 +60,27 @@ const Fail = (x: any): FailMonad => ({
 
 const Inquiry = (x: Inquiry) => ({
     inquire: (f: Function) => f(x.subject.join()).answer(x, f.name),
-    informant: (f: Function) => Inquiry({ // @todo accept array of functions instead, or have a plural version
-        subject: x.subject,
-        fail: Fail(x.pass.join()),
-        pass: Pass(x.fail.join()),
-        informant: f
-    }),
+    inquireP: (f: Function) =>
+        Inquiry({
+            subject: x.subject,
+            fail: x.fail,
+            pass: x.pass,
+            iou: x.iou.concat(IOU([f(x.subject.join)])),
+            informant: x.informant
+        }),
+    informant: (f: Function) =>
+        Inquiry({
+            // @todo accept array of functions instead, or have a plural version
+            subject: x.subject,
+            iou: x.iou,
+            fail: x.fail,
+            pass: x.pass,
+            informant: f
+        }),
     swap: (): InquiryMonad =>
         Inquiry({
             subject: x.subject,
+            iou: x.iou,
             fail: Fail(x.pass.join()),
             pass: Pass(x.fail.join()),
             informant: x.informant
@@ -67,6 +90,7 @@ const Inquiry = (x: Inquiry) => ({
     ): InquiryMonad => // apply a single map to both fail & pass (e.g. sort)
         Inquiry({
             subject: x.subject,
+            iou: x.iou,
             fail: Fail(f(x.fail.join())),
             pass: Pass(f(x.pass.join())),
             informant: x.informant
@@ -80,6 +104,7 @@ const Inquiry = (x: Inquiry) => ({
         i.informant([n, Inquiry(x)]);
         return Inquiry({
             subject: i.subject,
+            iou: i.iou,
             fail: i.fail.concat(x.fail),
             pass: i.pass.concat(x.pass),
             informant: i.informant
@@ -87,12 +112,27 @@ const Inquiry = (x: Inquiry) => ({
     },
 
     // unwraps with complete value
-    cohort: (f: Function, g: Function): Inquiry => ({
-        subject: x.subject,
-        fail: f(x.fail),
-        pass: g(x.pass),
-        informant: x.informant
-    }),
+    // @todo deal with IOUs
+    cohort: (f: Function, g: Function): any => {
+        // IF there was Promises. Need to deal with what if there were not
+        // then deal with what if they were Futures
+        // @ todo: resolve Promises, nodebacks, Futures
+        // then run unwrapper
+        // ideally if no "P" or "F" functions are called, this can all still be sync
+
+        const buildInq = (vals: Array<any>) => vals.reduce((acc, cur) => cur.answer(x, "reduced"), x);
+
+        return Promise.all(x.iou.join())
+            .then(buildInq)
+            .then(i => i.isInquiry ? i.join() : i)
+            .then(y => ({
+                subject: y.subject,
+                iou: y.iou,
+                fail: f(y.fail),
+                pass: g(y.pass),
+                informant: y.informant
+            }));
+    },
     join: (): Inquiry => x,
 
     fork: (f: Function, g: Function): any =>
@@ -107,6 +147,12 @@ const Inquiry = (x: Inquiry) => ({
 Inquiry.constructor.prototype["of"] = (x: any) =>
     R.prop("isInquiry", x)
         ? x
-        : Inquiry({ subject: Maybe.of(x), fail: Fail([]), pass: Pass([]), informant: (_: any) => _ });
+        : Inquiry({
+              subject: Maybe.of(x),
+              fail: Fail([]),
+              pass: Pass([]),
+              iou: IOU([]),
+              informant: (_: any) => _
+          });
 
 export { Inquiry, Fail, Pass };
