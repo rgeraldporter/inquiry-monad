@@ -16,10 +16,14 @@ interface PassFailMonad extends Monad {
     isFail: boolean;
     isInquiry: false;
     answer: Function;
+    head: Function;
+    tail: Function;
 }
 
 interface IOUMonad extends Monad {
     concat: Function;
+    head: Function;
+    tail: Function;
 }
 
 interface PassMonad extends PassFailMonad {

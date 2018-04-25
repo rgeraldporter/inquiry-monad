@@ -23,7 +23,6 @@ function resolveAfter2Seconds(x: any) {
 }
 
 describe("The module", () => {
-
     // note that while these pass, to use this monad as intended
     // one should never call Inquiry() directly
     // this first set of tests take values that aren't of the type expected
@@ -40,7 +39,6 @@ describe("The module", () => {
     });
 
     it("should satisfy the second monad law of right identity", () => {
-
         // 2. m.chain(unit) ==== m
         const rightIdentity1 = Inquiry(2).chain(Inquiry);
         const rightIdentity2 = Inquiry(2);
@@ -53,14 +51,15 @@ describe("The module", () => {
         const f = n => Inquiry(n * 2);
 
         // 3. m.chain(f).chain(g) ==== m.chain(x => f(x).chain(g))
-        const associativity1 = Inquiry(3).chain(g).chain(f);
+        const associativity1 = Inquiry(3)
+            .chain(g)
+            .chain(f);
         const associativity2 = Inquiry(3).chain(x => g(x).chain(f));
 
         expect(associativity1.join()).toEqual(associativity2.join());
     });
 
     it("should be able to make many checks, including async ones, and run a cohort and return the subject unchanged", () => {
-
         return (Inquiry as any)
             .subject({ name: "test", age: 10, description: "blah" })
             .inquire(oldEnough)
@@ -84,9 +83,16 @@ describe("The module", () => {
                 }
             )
             .then((x: any) => {
-                expect(x.subject.join()).toEqual({ name: "test", age: 10, description: "blah" });
-                expect(R.head(x.pass.join())).toEqual({ height: 110, in: "cm" });
-            })
+                expect(x.subject.join()).toEqual({
+                    name: "test",
+                    age: 10,
+                    description: "blah"
+                });
+                expect(R.head(x.pass.join())).toEqual({
+                    height: 110,
+                    in: "cm"
+                });
+            });
     });
 
     it("should be able to make many checks and run a fork", () => {
@@ -105,21 +111,19 @@ describe("The module", () => {
                     return x.join();
                 },
                 (y: PassMonad) => {
-                    expect(y.inspect()).toBe(
-                        "this should not run"
-                    );
+                    expect(y.inspect()).toBe("this should not run");
                     return y.join();
                 }
             );
     });
 
     it("should be able to merge a sub-inquiry into a master inquiry", () => {
-
         const evaluateHealth = (a: any) =>
-            (Inquiry as any).subject(a)
-                .inquire(() => Pass('Passed something'))
-                .inquire(() => Fail('Failed something'))
-                .inquire(() => Fail('Failed something else'));
+            (Inquiry as any)
+                .subject(a)
+                .inquire(() => Pass("Passed something"))
+                .inquire(() => Fail("Failed something"))
+                .inquire(() => Fail("Failed something else"));
 
         const result = (Inquiry as any)
             .subject({ name: "test", age: 14, description: "blah" })
@@ -146,12 +150,12 @@ describe("The module", () => {
     });
 
     it("should be able to be stopped in the middle of processing with a breakpoint if there are failures", () => {
-
         const evaluateHealth = (a: any) =>
-            (Inquiry as any).subject(a)
-                .inquire(() => Pass('Passed something'))
-                .inquire(() => Fail('Failed something'))
-                .inquire(() => Fail('Failed something else'));
+            (Inquiry as any)
+                .subject(a)
+                .inquire(() => Pass("Passed something"))
+                .inquire(() => Fail("Failed something"))
+                .inquire(() => Fail("Failed something else"));
 
         let reachedBreakpoint = 0;
 
@@ -159,7 +163,6 @@ describe("The module", () => {
             .subject({ name: "test", age: 11, description: "blah" })
             .inquire(oldEnough)
             .breakpoint((x: any) => {
-
                 // clearing the existing failure, it will not appear at the end
                 // this is not a practice example, usually one one do some kind of exit
                 x.fail = Fail([]);
@@ -175,24 +178,28 @@ describe("The module", () => {
                     expect(x.inspect()).toBe(
                         "Fail(Name wasn't spelled correctly,Failed at math,Failed something,Failed something else)"
                     );
+                    expect(x.head()).toEqual("Name wasn't spelled correctly");
+                    expect(x.tail()).toEqual("Failed something else");
                     return x.join();
                 },
                 (y: PassMonad) => {
                     expect(y.inspect()).toBe(
                         "Pass([object Object],[object Object],Passed something)"
                     );
+                    expect(y.head()).toEqual({ height: 110, in: "cm" });
+                    expect(y.tail()).toEqual("Passed something");
                     return y.join();
                 }
             );
     });
 
     it("should be able to be stopped in the middle of processing with a milestone if there are passes", () => {
-
         const evaluateHealth = (a: any) =>
-            (Inquiry as any).subject(a)
-                .inquire(() => Pass('Passed something'))
-                .inquire(() => Fail('Failed something'))
-                .inquire(() => Fail('Failed something else'));
+            (Inquiry as any)
+                .subject(a)
+                .inquire(() => Pass("Passed something"))
+                .inquire(() => Fail("Failed something"))
+                .inquire(() => Fail("Failed something else"));
 
         let reachedBreakpoint = 0;
 
@@ -200,7 +207,6 @@ describe("The module", () => {
             .subject({ name: "test", age: 11, description: "blah" })
             .inquire(oldEnough)
             .milestone((x: any) => {
-
                 // clearing the existing failure, it will not appear at the end
                 // this is not a practice example, usually one one do some kind of exit
                 x.pass = Pass([]);

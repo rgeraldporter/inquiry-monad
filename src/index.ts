@@ -7,7 +7,9 @@ const IOU = (x: any): IOUMonad => ({
     ap: (y: Monad) => y.map(x),
     inspect: () => <string>`IOU(${x})`,
     join: () => x,
-    concat: (o: Monad) => o.chain((r: any) => IOU(x.concat(r)))
+    concat: (o: Monad) => o.chain((r: any) => IOU(x.concat(r))),
+    head: () => x.length ? x[0] : [],
+    tail: () => x.length ? x[x.length - 1] : []
 });
 
 const Pass = (x: any): PassMonad => ({
@@ -15,11 +17,13 @@ const Pass = (x: any): PassMonad => ({
     chain: (f: Function) => f(x),
     fold: (f: Function, _: Function) => f(x),
     fork: (_: Function, f: Function) => f(x),
+    head: () => x.length ? x[0] : [],
+    tail: () => x.length ? x[x.length - 1] : [],
     join: () => x,
     inspect: () => <string>`Pass(${x})`,
     concat: (o: PassFailMonad) => o.fold((r: any) => Pass(x.concat(r)), null),
     ap: (y: PassFailMonad) => (y.isPass ? y.concat(Pass(x)) : Pass(x)),
-    answer: (i: Inquiry, n: string) => {
+    answer: (i: Inquiry, n: string = "(anonymous)") => {
         i.informant([n, Pass(x)]);
         return Inquiry({
             subject: i.subject,
@@ -39,11 +43,13 @@ const Fail = (x: any): FailMonad => ({
     chain: (f: Function) => f(x),
     fold: (_: Function, f: Function) => f(x),
     fork: (f: Function, _: Function) => f(x),
+    head: () => x.length ? x[0] : [],
+    tail: () => x.length ? x[x.length - 1] : [],
     join: () => x,
     inspect: () => <string>`Fail(${x})`,
     concat: (o: PassFailMonad) => o.fork((r: any) => Fail(x.concat(r)), null),
     ap: (y: PassFailMonad) => (y.isPass ? Fail(x) : y.concat(Fail(x))),
-    answer: (i: Inquiry, n: string) => {
+    answer: (i: Inquiry, n: string = "(anonymous)") => {
         i.informant([n, Fail(x)]);
         return Inquiry({
             subject: i.subject,
@@ -102,11 +108,9 @@ const Inquiry = (x: Inquiry) => ({
     chain: (f: Function) => f(x),
 
     // opportunity to exit early, or adjust and continue
-    breakpoint: (f: Function) => x.fail.join().length ? f(x) : Inquiry(x),
-    milestone: (f: Function) => x.pass.join().length ? f(x) : Inquiry(x),
-
-    // need something that does the same for pass branch ?
-    // milestone vs breakpoint?
+    // but what do we do if we're still waiting on IOUs?
+    breakpoint: (f: Function) => (x.fail.join().length ? f(x) : Inquiry(x)),
+    milestone: (f: Function) => (x.pass.join().length ? f(x) : Inquiry(x)),
 
     answer: (i: Inquiry, n: string) => {
         i.informant([n, Inquiry(x)]);
@@ -128,11 +132,12 @@ const Inquiry = (x: Inquiry) => ({
         // then run unwrapper
         // ideally if no "P" or "F" functions are called, this can all still be sync
 
-        const buildInq = (vals: Array<any>) => vals.reduce((acc, cur) => cur.answer(x, "reduced"), x);
+        const buildInq = (vals: Array<any>) =>
+            vals.reduce((acc, cur) => cur.answer(x, "reduced"), x);
 
         return Promise.all(x.iou.join())
             .then(buildInq)
-            .then(i => i.isInquiry ? i.join() : i)
+            .then(i => (i.isInquiry ? i.join() : i))
             .then(y => ({
                 subject: y.subject,
                 iou: y.iou,
