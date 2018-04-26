@@ -93,7 +93,7 @@ const Inquiry = (x: Inquiry) => ({
             pass: x.pass,
             informant: f
         }),
-    inspect: (): string => `Inquiry(${x.fail.inspect()} ${x.pass.inspect()}`,
+    inspect: (): string => `Inquiry(${x.fail.inspect()} ${x.pass.inspect()} ${x.iou.inspect()}`,
 
     // Flow control: swamp list/right pass/fail
     swap: (): InquiryMonad =>
@@ -170,6 +170,7 @@ const Inquiry = (x: Inquiry) => ({
                   }));
     },
 
+    // @todo clearedMap & faultedMap
     // unwraps right (pass) only if no fails, return either a Promise or an Inquiry depending on IOUs
     cleared: (f: Function): any => {
         const buildInq = (vals: Array<any>) =>
