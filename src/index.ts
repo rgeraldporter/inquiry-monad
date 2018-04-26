@@ -67,7 +67,6 @@ const Fail = (x: any): FailMonad => ({
 });
 
 const Inquiry = (x: Inquiry) => ({
-
     // Inquires: core methods
 
     // @todo handle when an f() in inquire does not return a monad correctly
@@ -95,7 +94,6 @@ const Inquiry = (x: Inquiry) => ({
             informant: f
         }),
     inspect: (): string => `Inquiry(${x.fail.inspect()} ${x.pass.inspect()}`,
-
 
     // Flow control: swamp list/right pass/fail
     swap: (): InquiryMonad =>
