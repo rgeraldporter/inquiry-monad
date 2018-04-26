@@ -36,8 +36,8 @@ describe("The module", () => {
     // this first set of tests take values that aren't of the type expected
     // @todo convert to type expected
     it("should satisfy the first monad law of left identity", () => {
-        const g = n => Inquiry(n + 1);
-        const f = n => Inquiry(n * 2);
+        const g = (n: number) => Inquiry(n + 1);
+        const f = (n: number) => Inquiry(n * 2);
 
         // 1. unit(x).chain(f) ==== f(x)
         const leftIdentity1 = Inquiry(1).chain(f);

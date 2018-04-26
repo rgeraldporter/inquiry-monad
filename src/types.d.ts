@@ -43,7 +43,7 @@ interface Inquiry {
     fail: FailMonad;
     pass: PassMonad;
     informant: Function;
-    iou?: Monad;
+    iou: IOUMonad;
     of?: Function;
 }
 
