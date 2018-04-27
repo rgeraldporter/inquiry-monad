@@ -69,8 +69,12 @@ const Fail = (x: any): FailMonad => ({
 const Inquiry = (x: Inquiry) => ({
     // Inquires: core methods
 
-    // @todo handle when an f() in inquire does not return a monad correctly
-    inquire: (f: Function) => f(x.subject.join()).answer(x, f.name),
+    inquire: (f: Function) => {
+        const inquireResponse = f(x.subject.join());
+        return inquireResponse.isFail || inquireResponse.isPass || inquireResponse.isInquiry
+            ? inquireResponse.answer(x, f.name)
+            : Pass(inquireResponse);
+    },
 
     // Promise-deferring inquire (using IOUs)
     inquireP: (f: Function) =>

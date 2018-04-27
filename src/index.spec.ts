@@ -36,10 +36,15 @@ describe("The module", () => {
     // this first set of tests take values that aren't of the type expected
     // @todo convert to type expected
     it("should satisfy the first monad law of left identity", () => {
+
+        // @ts-ignore
         const g = (n: number) => Inquiry(n + 1);
+        // @ts-ignore
         const f = (n: number) => Inquiry(n * 2);
 
         // 1. unit(x).chain(f) ==== f(x)
+
+        // @ts-ignore
         const leftIdentity1 = Inquiry(1).chain(f);
         const leftIdentity2 = f(1);
 
@@ -47,21 +52,31 @@ describe("The module", () => {
     });
 
     it("should satisfy the second monad law of right identity", () => {
-        // 2. m.chain(unit) ==== m
+
+        // @ts-ignore
         const rightIdentity1 = Inquiry(2).chain(Inquiry);
+        // @ts-ignore
         const rightIdentity2 = Inquiry(2);
 
+        // 2. m.chain(unit) ==== m
         expect(rightIdentity1.join()).toEqual(rightIdentity2.join());
     });
 
     it("should satisfy the third monad law of associativity", () => {
+
+        // @ts-ignore
         const g = n => Inquiry(n + 1);
+        // @ts-ignore
         const f = n => Inquiry(n * 2);
 
         // 3. m.chain(f).chain(g) ==== m.chain(x => f(x).chain(g))
+
+        // @ts-ignore
         const associativity1 = Inquiry(3)
             .chain(g)
             .chain(f);
+
+        // @ts-ignore
         const associativity2 = Inquiry(3).chain(x => g(x).chain(f));
 
         expect(associativity1.join()).toEqual(associativity2.join());
@@ -97,6 +112,7 @@ describe("The module", () => {
                     description: "blah"
                 });
                 expect(R.head(x.pass.join())).toEqual({
+                    // @ts-ignore
                     height: 110,
                     in: "cm"
                 });
