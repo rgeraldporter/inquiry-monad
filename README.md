@@ -1,5 +1,5 @@
 # Inquiry Monad
-### v0.12.0
+### v0.12.1
 
 Experiment with aggregate Left/Right monad running parallel. More details when it is better fleshed out.
 
@@ -40,7 +40,7 @@ Inquiry.subject(subjectDataWithFailure)
     .inquire(hasNoC)
     .join();
 
-// result: {subject: {a:1, b:false}, pass: Pass(['has a']), fail: Fail(['b is invalid', 'has c value']), iou: IOU()}
+// result: {subject: {a:1, b:'string', c:true}, pass: Pass(['has a']), fail: Fail(['b is invalid', 'has c value']), iou: IOU()}
 
 /* With async Promises */
 const checkDb = async (x) => Promise.resolve('pretend I looked something up in a db');
@@ -54,7 +54,7 @@ Inquiry.subject(subjectDataWithFailure)
     .conclude(x => x, y => y);
     // for now .conclude or another unwrap fn is necessary to complete "IOUs" to give a clean exit (unresolved Promises)
 
-// result: {subject: {a:1, b:false}, pass: Pass(['has a', 'pretend I looked something up in a db']), fail: Fail(['b is invalid', 'has c value']), iou: IOU()}
+// result: {subject: {a:1, b:'string', c:true}, pass: Pass(['has a', 'pretend I looked something up in a db']), fail: Fail(['b is invalid', 'has c value']), iou: IOU()}
 
 ```
 
