@@ -1,4 +1,4 @@
-import { Inquiry, Fail, Pass } from "./index";
+import { Inquiry, InquiryP, Fail, Pass } from "./index";
 import * as R from "ramda";
 import "jasmine";
 import { Maybe } from "simple-maybe";
@@ -83,11 +83,11 @@ describe("The module", () => {
     });
 
     it("should be able to make many checks, including async ones, and run a conclude and return the subject unchanged", () => {
-        return (Inquiry as any)
+        return (InquiryP as any)
             .subject({ name: "test", age: 10, description: "blah" })
             .inquire(oldEnough)
             .inquire(findHeight)
-            .inquireP(resolveAfter2Seconds)
+            .inquire(resolveAfter2Seconds)
             .inquire(nameSpelledRight)
             .inquire(hasRecords)
             .inquire(mathGrade)
@@ -258,11 +258,11 @@ describe("The module", () => {
     });
 
     it("should be able to make many checks, including async ones, and run a faulted unwrap", () => {
-        return (Inquiry as any)
+        return (InquiryP as any)
             .subject({ name: "test", age: 10, description: "blah" })
             .inquire(oldEnough)
             .inquire(findHeight)
-            .inquireP(resolveAfter1Second)
+            .inquire(resolveAfter1Second)
             .inquire(nameSpelledRight)
             .inquire(hasRecords)
             .inquire(mathGrade)
@@ -277,11 +277,11 @@ describe("The module", () => {
     });
 
     it("should be able to make many checks, including async ones, and run a cleared unwrap when all passes", () => {
-        return (Inquiry as any)
+        return (InquiryP as any)
             .subject({ name: "test", age: 14, description: "blah" })
             .inquire(oldEnough)
             .inquire(findHeight)
-            .inquireP(resolveAfter1Second)
+            .inquire(resolveAfter1Second)
             .inquire(hasRecords)
             .faulted(
                 (x: any) => {
