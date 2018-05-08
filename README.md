@@ -43,7 +43,7 @@ Inquiry.subject(subjectDataWithFailure)
 // result: {subject: {a:1, b:'string', c:true}, pass: Pass(['has a']), fail: Fail(['b is invalid', 'has c value']), iou: IOU()}
 
 /* With async Promises */
-const checkDb = async (x) => Promise.resolve('pretend I looked something up in a db');
+const checkDb = async (x) => Promise.resolve(Pass('pretend I looked something up in a db'));
 
 Inquiry.subject(subjectDataWithFailure)
     .informant(console.log)
