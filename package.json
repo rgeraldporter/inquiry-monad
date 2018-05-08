@@ -1,6 +1,6 @@
 {
   "name": "inquiry-monad",
-  "version": "0.12.1",
+  "version": "0.12.3",
   "description": "",
   "main": "built/index.js",
   "scripts": {
@@ -14,7 +14,7 @@
     "left",
     "right"
   ],
-  "author": "Rob Porter <rob@inpictures.ca>",
+  "author": "Rob Porter <rob@weeverapps.com>",
   "license": "MIT",
   "devDependencies": {
     "@types/jasmine": "2.8.6",
