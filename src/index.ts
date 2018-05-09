@@ -10,6 +10,7 @@ const IOU = (x: any): IOUMonad => ({
     head: () => (x.length ? x[0] : []),
     tail: () => (x.length ? x[x.length - 1] : []),
     isEmpty: () => Boolean(!x.length)
+    // @todo isIOU ? isInquiry ?
 });
 
 const Pass = (x: any): PassMonad => ({
@@ -26,12 +27,12 @@ const Pass = (x: any): PassMonad => ({
     answer: (i: Inquiry, n: string = "(anonymous)", c: Function = Inquiry) => {
         i.informant([n, Pass(x)]);
         return c({
-                subject: i.subject,
-                fail: i.fail,
-                iou: i.iou,
-                pass: i.pass.concat(Pass(x)),
-                informant: i.informant
-            });
+            subject: i.subject,
+            fail: i.fail,
+            iou: i.iou,
+            pass: i.pass.concat(Pass(x)),
+            informant: i.informant
+        });
     },
     isEmpty: () => Boolean(!x.length),
     isPass: true,
@@ -66,23 +67,23 @@ const Fail = (x: any): FailMonad => ({
     isInquiry: false
 });
 
-// 1. break out into: Inquiry() InquiryPromise() (or PromisedInquiry) and FutureInquiry() (or InquiryFuture)
-// 2. promise-based version will use IOUs still, can use something like .await() if need to wait for data
+// 1. ✅ break out into: Inquiry() InquiryPromise() (or PromisedInquiry) and FutureInquiry() (or InquiryFuture)
+// 2. ✅ promise-based version will use IOUs still, can use something like .await() if need to wait for data
 // 3. Each Pass or Fail should now be Pass(['fnName', result]); -- e.g. Pass([['fnName', result], ['otherFn', result2]]);
 // 4. add fns to handle retrieving data insight within Pass & Fail
 
 const Inquiry = (x: Inquiry) => ({
-    // Inquires: core methods
-
+    // Inquire: core method
     inquire: (f: Function) => {
         const inquireResponse = f(x.subject.join());
-        return inquireResponse.isFail || inquireResponse.isPass || inquireResponse.isInquiry
+        return inquireResponse.isFail ||
+            inquireResponse.isPass ||
+            inquireResponse.isInquiry
             ? inquireResponse.answer(x, f.name, Inquiry)
             : Pass(inquireResponse);
     },
 
     // Informant: for spying/logging/observable
-
     informant: (f: Function) =>
         Inquiry({
             // @todo accept array of functions instead, or have a plural version
@@ -92,9 +93,11 @@ const Inquiry = (x: Inquiry) => ({
             pass: x.pass,
             informant: f
         }),
-    inspect: (): string => `Inquiry(${x.fail.inspect()} ${x.pass.inspect()} ${x.iou.inspect()}`,
 
-    // Flow control: swamp list/right pass/fail
+    inspect: (): string =>
+        `Inquiry(${x.fail.inspect()} ${x.pass.inspect()} ${x.iou.inspect()}`,
+
+    // Flow control: swap pass/fail
     swap: (): InquiryMonad =>
         Inquiry({
             subject: x.subject,
@@ -122,10 +125,13 @@ const Inquiry = (x: Inquiry) => ({
     chain: (f: Function) => f(x),
     join: (): Inquiry => x,
 
-    // opportunity to exit early, or adjust and continue
+    // execute the provided function if there are failures, else continue
     breakpoint: (f: Function) => (x.fail.join().length ? f(x) : Inquiry(x)),
+
+    // execute the provided function if there are passes, else continue
     milestone: (f: Function) => (x.pass.join().length ? f(x) : Inquiry(x)),
 
+    // internal method: execute informant, return new InquiryP() based on updated results
     answer: (i: Inquiry, n: string, _: Function) => {
         i.informant([n, Inquiry(x)]);
         return Inquiry({
@@ -137,7 +143,7 @@ const Inquiry = (x: Inquiry) => ({
         });
     },
 
-    // Unwrap functions
+    // Unwrap methods
 
     // unwraps, mapping for both branches, full value returned
     conclude: (f: Function, g: Function): any => ({
@@ -148,12 +154,11 @@ const Inquiry = (x: Inquiry) => ({
         informant: x.informant
     }),
 
-    // @todo clearedMap & faultedMap
-    // unwraps right (pass) only if no fails, return either a Promise or an Inquiry depending on IOUs
-    cleared: (f: Function): any => x.fail.isEmpty() ? f(x.pass) : Inquiry(x),
+    // If no fails, handoff aggregated passes to supplied function; if fails, return existing Inquiry
+    cleared: (f: Function): any => (x.fail.isEmpty() ? f(x.pass) : Inquiry(x)),
 
-    // unwrap left if fails, same as cleared
-    faulted: (f: Function): any => x.fail.isEmpty() ? Inquiry(x) : f(x.fail),
+    // If fails, handoff aggregated fails to supplied function; if no fails, return existing Inquiry
+    faulted: (f: Function): any => (x.fail.isEmpty() ? Inquiry(x) : f(x.fail)),
 
     // unwrap left if fails, right if not
     fork: (f: Function, g: Function): any =>
@@ -166,31 +171,30 @@ const Inquiry = (x: Inquiry) => ({
     //@todo determine if we could zip "in order of tests"
 });
 
+const buildInq = (x: any) => (vals: Array<any>) =>
+    vals.reduce((acc, cur) => cur.answer(x, "reduced", InquiryP), x);
+
 const InquiryP = (x: Inquiry) => ({
-
-    // Inquires: core methods
-    // detect promise
+    // Inquire: core method
     inquire: (f: Function) => {
-
         const inquireResponse = f(x.subject.join());
-        const syncronousResponse = (response: any) =>
+        const syncronousResult = (response: any) =>
             response.isFail || response.isPass || response.isInquiry
                 ? response.answer(x, f.name, InquiryP)
                 : Pass(response);
 
         return inquireResponse.then
             ? InquiryP({
-                    subject: x.subject,
-                    fail: x.fail,
-                    pass: x.pass,
-                    iou: x.iou.concat(IOU([inquireResponse])),
-                    informant: x.informant
-                })
-            : syncronousResponse(inquireResponse);
+                  subject: x.subject,
+                  fail: x.fail,
+                  pass: x.pass,
+                  iou: x.iou.concat(IOU([inquireResponse])),
+                  informant: x.informant
+              })
+            : syncronousResult(inquireResponse);
     },
 
     // Informant: for spying/logging/observable
-
     informant: (f: Function) =>
         InquiryP({
             // @todo accept array of functions instead, or have a plural version
@@ -200,9 +204,10 @@ const InquiryP = (x: Inquiry) => ({
             pass: x.pass,
             informant: f
         }),
-    inspect: (): string => `InquiryP(${x.fail.inspect()} ${x.pass.inspect()} ${x.iou.inspect()}`,
+    inspect: (): string =>
+        `InquiryP(${x.fail.inspect()} ${x.pass.inspect()} ${x.iou.inspect()}`,
 
-    // Flow control: swamp list/right pass/fail
+    // Flow control: swap left/right pass/fail (iou is untouched)
     swap: (): InquiryMonad =>
         InquiryP({
             subject: x.subject,
@@ -215,7 +220,7 @@ const InquiryP = (x: Inquiry) => ({
     // Mapping across both branches
     unison: (
         f: Function
-    ): InquiryMonad => // apply a single map to both fail & pass (e.g. sort)
+    ): InquiryMonad => // apply a single map to both fail & pass (e.g. sort), iou untouched
         InquiryP({
             subject: x.subject,
             iou: x.iou,
@@ -224,18 +229,20 @@ const InquiryP = (x: Inquiry) => ({
             informant: x.informant
         }),
 
-    // standard Monad methods
+    // Standard monad methods - note that while these work, remember that `x` is a typed Object
     map: (f: Function): Inquiry => (InquiryP as any).of(f(x)), // cast required for now
     ap: (y: Monad) => y.map(x),
     chain: (f: Function) => f(x),
     join: (): Inquiry => x,
 
-    // opportunity to exit early, or adjust and continue
-    // but what do we do if we're still waiting on IOUs?
+    // execute the provided function if there are failures, else continue
     breakpoint: (f: Function) => (x.fail.join().length ? f(x) : InquiryP(x)),
+
+    // execute the provided function if there are passes, else continue
     milestone: (f: Function) => (x.pass.join().length ? f(x) : InquiryP(x)),
 
-    answer: (i: Inquiry, n: string, _: Function) => {
+    // internal method: execute informant, return new InquiryP() based on updated results
+    answer: (i: Inquiry, n: string, _: Function): InquiryMonad => {
         i.informant([n, InquiryP(x)]);
         return InquiryP({
             subject: i.subject,
@@ -246,19 +253,12 @@ const InquiryP = (x: Inquiry) => ({
         });
     },
 
-    // Unwrap functions
+    // Unwrapping methods: all return Promises, all complete outstanding IOUs
 
-    // unwraps, mapping for both branches, full value returned
-    conclude: (f: Function, g: Function): any => {
-        // @ todo: resolve Promises, nodebacks, Futures
-        // then run unwrapper
-
-        const buildInq = (vals: Array<any>) =>
-            vals.reduce((acc, cur) => cur.answer(x, "reduced", InquiryP), x);
-
-        // lets not go async if we can help it
-        return Promise.all(x.iou.join())
-            .then(buildInq)
+    // Unwraps the Inquiry after ensuring all IOUs are completed
+    conclude: async (f: Function, g: Function): Promise<Inquiry> =>
+        Promise.all(x.iou.join())
+            .then(buildInq(x))
             .then(i => (i.isInquiry ? i.join() : i))
             .then(y => ({
                 subject: y.subject,
@@ -266,48 +266,49 @@ const InquiryP = (x: Inquiry) => ({
                 fail: f(y.fail),
                 pass: g(y.pass),
                 informant: y.informant
-            }));
-    },
+            })),
 
-    // @todo clearedMap & faultedMap
-    // unwraps right (pass) only if no fails, return either a Promise or an Inquiry depending on IOUs
-    cleared: (f: Function): any => {
-        const buildInq = (vals: Array<any>) =>
-            vals.reduce((acc, cur) => cur.answer(x, "reduced", InquiryP), x);
-
-        const clearNow = () => (x.fail.isEmpty() ? f(x.pass) : InquiryP(x));
-
-        // can't do .faulted if returning a Promise
-        return Promise.all(x.iou.join())
-            .then(buildInq)
+    // If no fails, handoff aggregated passes to supplied function; if fails, return existing InquiryP
+    cleared: async (f: Function): Promise<InquiryMonad | Array<any>> =>
+        Promise.all(x.iou.join())
+            .then(buildInq(x))
             .then(i => (i.isInquiry ? i.join() : i))
-            .then(y => (y.fail.isEmpty() ? f(y.pass) : InquiryP(x)))
-            .catch(err => console.error("err", err));
-    },
+            .then(y => (y.fail.isEmpty() ? f(y.pass) : InquiryP(y)))
+            .catch(err => console.error("err", err)),
 
-    // unwrap left if fails, same as cleared
-    faulted: (f: Function): any => {
-        const buildInq = (vals: Array<any>) =>
-            vals.reduce((acc, cur) => cur.answer(x, "reduced"), x);
-
-        return Promise.all(x.iou.join())
-            .then(buildInq)
+    // If fails, handoff aggregated fails to supplied function; if no fails, return existing InquiryP
+    faulted: async (f: Function): Promise<InquiryMonad | Array<any>> =>
+        Promise.all(x.iou.join())
+            .then(buildInq(x))
             .then(i => (i.isInquiry ? i.join() : i))
-            .then(y => (y.fail.isEmpty() ? InquiryP(x) : f(x.fail)));
-    },
+            .then(y => (y.fail.isEmpty() ? InquiryP(y) : f(y.fail))),
 
-    // unwrap left if fails, right if not, no async
-    fork: (f: Function, g: Function): any =>
-        x.fail.join().length ? f(x.fail) : g(x.pass),
+    // Take left function and hands off fails if any, otherwise takes left function and hands off passes to that function
+    fork: async (f: Function, g: Function): Promise<Array<any>> =>
+        Promise.all(x.iou.join())
+            .then(buildInq(x))
+            .then(i => (i.isInquiry ? i.join() : i))
+            .then(y => (y.fail.join().length ? f(y.fail) : g(y.pass))),
 
-    // return a merged pass/fail
-    zip: (f: Function): Array<any> => f(x.fail.join().concat(x.pass.join())), // return a concat of pass/fails
+    // return a Promise containing a merged fail/pass resultset array
+    zip: async (f: Function): Promise<Array<any>> =>
+        Promise.all(x.iou.join())
+            .then(buildInq(x))
+            .then(i => (i.isInquiry ? i.join() : i))
+            .then(y => f(y.fail.join().concat(y.pass.join()))),
+
+    // await all IOUs to resolve, then return a new Inquiry
+    // @todo: awaitP, awaitF that return an InquiryP or InquiryF
+    await: async (): Promise<InquiryMonad> =>
+        Promise.all(x.iou.join())
+            .then(buildInq(x))
+            .then(i => (i.isInquiry ? i.join() : i))
+            .then(y => Inquiry(y)),
+
     isInquiry: true
     //@todo determine if we could zip "in order of tests"
 });
 
-// really this should be "ofSubject" and "of" would just be our pointed constructor
-// ideas: Inquiry.subject()
 Inquiry.constructor.prototype["of"] = (x: any) =>
     x.isInquiry
         ? x

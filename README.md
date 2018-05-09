@@ -1,5 +1,5 @@
 # Inquiry Monad
-### v0.12.2
+### v0.13.0
 
 Experiment with aggregate Left/Right monad running parallel. More details when it is better fleshed out.
 
@@ -45,7 +45,7 @@ Inquiry.subject(subjectDataWithFailure)
 /* With async Promises */
 const checkDb = async (x) => Promise.resolve(Pass('pretend I looked something up in a db'));
 
-Inquiry.subject(subjectDataWithFailure)
+InquiryP.subject(subjectDataWithFailure)
     .informant(console.log)
     .inquire(checkDb)
     .inquire(hasA)
