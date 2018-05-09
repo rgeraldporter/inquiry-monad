@@ -72,7 +72,7 @@ const Fail = (x: any): FailMonad => ({
 // 3. Each Pass or Fail should now be Pass(['fnName', result]); -- e.g. Pass([['fnName', result], ['otherFn', result2]]);
 // 4. add fns to handle retrieving data insight within Pass & Fail
 
-const Inquiry = (x: Inquiry) => ({
+const Inquiry = (x: Inquiry): InquiryMonad => ({
     // Inquire: core method
     inquire: (f: Function) => {
         const inquireResponse = f(x.subject.join());
@@ -174,7 +174,7 @@ const Inquiry = (x: Inquiry) => ({
 const buildInq = (x: any) => (vals: Array<any>) =>
     vals.reduce((acc, cur) => cur.answer(x, "reduced", InquiryP), x);
 
-const InquiryP = (x: Inquiry) => ({
+const InquiryP = (x: Inquiry): InquiryMonad => ({
     // Inquire: core method
     inquire: (f: Function) => {
         const inquireResponse = f(x.subject.join());

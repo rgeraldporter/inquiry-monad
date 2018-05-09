@@ -1,6 +1,6 @@
 {
   "name": "inquiry-monad",
-  "version": "0.12.3",
+  "version": "0.13.1",
   "description": "",
   "main": "built/index.js",
   "scripts": {
