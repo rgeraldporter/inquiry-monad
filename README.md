@@ -1,7 +1,9 @@
 # Inquiry Monad
-### v0.13.1
+### v0.14.0
 
 Experiment with aggregate Left/Right monad running parallel. More details when it is better fleshed out.
+
+**Note**: From 0.14+ this now has support for Futures, but this will be moved eventually into another module before v1.0 is released.
 
 ```
 const {Inquiry, InquiryP, Pass, Fail} = require('inquiry-monad');

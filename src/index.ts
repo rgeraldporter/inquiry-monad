@@ -76,8 +76,6 @@ const Fail = (x: any): FailMonad => ({
 const Inquiry = (x: Inquiry): InquiryMonad => ({
     // Inquire: core method
     inquire: (f: Function) => {
-        console.log("inquire");
-
         const inquireResponse = f(x.subject.join());
         return inquireResponse.isFail ||
             inquireResponse.isPass ||
@@ -176,15 +174,15 @@ const Inquiry = (x: Inquiry): InquiryMonad => ({
 
 const exportInquiry = {
     subject: (x: any) =>
-    x.isInquiry
-        ? x
-        : Inquiry({
-              subject: Maybe.of(x),
-              fail: Fail([]),
-              pass: Pass([]),
-              iou: IOU([]),
-              informant: (_: any) => _
-          })
+        x.isInquiry
+            ? x
+            : Inquiry({
+                  subject: Maybe.of(x),
+                  fail: Fail([]),
+                  pass: Pass([]),
+                  iou: IOU([]),
+                  informant: (_: any) => _
+              })
 };
 
 const buildInqF = (x: any) => (vals: Array<any>) =>
@@ -193,7 +191,6 @@ const buildInqF = (x: any) => (vals: Array<any>) =>
 const InquiryF = (x: Inquiry): InquiryMonad => ({
     // Inquire: core method
     inquire: (f: Function) => {
-        console.log("inquireF");
         const inquireResponse = f(x.subject.join());
         const syncronousResult = (response: any) =>
             response.isFail || response.isPass || response.isInquiry
@@ -349,8 +346,6 @@ const buildInq = (x: any) => (vals: Array<any>) =>
 const InquiryP = (x: Inquiry): InquiryMonad => ({
     // Inquire: core method
     inquire: (f: Function) => {
-        console.log("inquireP");
-
         const inquireResponse = f(x.subject.join());
         const syncronousResult = (response: any) =>
             response.isFail || response.isPass || response.isInquiry
