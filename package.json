@@ -1,6 +1,6 @@
 {
   "name": "inquiry-monad",
-  "version": "0.13.1",
+  "version": "0.14.0",
   "description": "",
   "main": "built/index.js",
   "scripts": {
@@ -19,12 +19,13 @@
   "devDependencies": {
     "@types/jasmine": "2.8.6",
     "@types/ramda": "0.25.24",
+    "fluture": "8.0.2",
     "jasmine": "3.1.0",
     "ramda": "0.25.0",
     "ts-node": "6.0.0",
     "typescript": "2.8.3"
   },
   "dependencies": {
-    "simple-maybe": "0.1.2"
+    "simple-maybe": "0.3.5"
   }
 }
