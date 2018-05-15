@@ -15,6 +15,7 @@ interface PassFailMonad extends Monad {
     isPass: boolean;
     isFail: boolean;
     isInquiry: false;
+    isIOU: false;
     answer: Function;
     head: Function;
     tail: Function;
@@ -26,6 +27,10 @@ interface IOUMonad extends Monad {
     head: Function;
     tail: Function;
     isEmpty: Function;
+    isIOU: true;
+    isInquiry: false;
+    isPass: false;
+    isFail: false;
 }
 
 interface PassMonad extends PassFailMonad {

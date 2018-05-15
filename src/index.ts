@@ -10,7 +10,11 @@ const IOU = (x: any): IOUMonad => ({
     concat: (o: IOUMonad) => o.chain((r: any) => IOU(x.concat(r))),
     head: () => (x.length ? x[0] : []),
     tail: () => (x.length ? x[x.length - 1] : []),
-    isEmpty: () => Boolean(!x.length)
+    isEmpty: () => Boolean(!x.length),
+    isInquiry: false,
+    isPass: false,
+    isFail: false,
+    isIOU: true
     // @todo isIOU ? isInquiry ?
 });
 
@@ -38,6 +42,7 @@ const Pass = (x: any): PassMonad => ({
     isEmpty: () => Boolean(!x.length),
     isPass: true,
     isFail: false,
+    isIOU: false,
     isInquiry: false
 });
 
@@ -65,6 +70,7 @@ const Fail = (x: any): FailMonad => ({
     isEmpty: () => Boolean(!x.length),
     isPass: false,
     isFail: true,
+    isIOU: false,
     isInquiry: false
 });
 
