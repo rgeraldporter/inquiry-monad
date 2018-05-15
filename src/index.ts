@@ -1,5 +1,5 @@
-import { Maybe } from "simple-maybe";
-import { Future } from "fluture";
+import { Maybe } from 'simple-maybe';
+import { Future } from 'fluture';
 
 const IOU = (x: any): IOUMonad => ({
     map: (f: Function) => IOU(f(x)),
@@ -25,7 +25,7 @@ const Pass = (x: any): PassMonad => ({
     inspect: () => <string>`Pass(${x})`,
     concat: (o: PassFailMonad) => o.fold((r: any) => Pass(x.concat(r)), null),
     ap: (y: PassFailMonad) => (y.isPass ? y.concat(Pass(x)) : Pass(x)),
-    answer: (i: Inquiry, n: string = "(anonymous)", c: Function = Inquiry) => {
+    answer: (i: Inquiry, n: string = '(anonymous)', c: Function = Inquiry) => {
         i.informant([n, Pass(x)]);
         return c({
             subject: i.subject,
@@ -52,7 +52,7 @@ const Fail = (x: any): FailMonad => ({
     inspect: () => <string>`Fail(${x})`,
     concat: (o: PassFailMonad) => o.fork((r: any) => Fail(x.concat(r)), null),
     ap: (y: PassFailMonad) => (y.isPass ? Fail(x) : y.concat(Fail(x))),
-    answer: (i: Inquiry, n: string = "(anonymous)", c: Function = Inquiry) => {
+    answer: (i: Inquiry, n: string = '(anonymous)', c: Function = Inquiry) => {
         i.informant([n, Fail(x)]);
         return c({
             subject: i.subject,
@@ -186,7 +186,7 @@ const exportInquiry = {
 };
 
 const buildInqF = (x: any) => (vals: Array<any>) =>
-    vals.reduce((acc, cur) => cur.answer(x, "reduced", InquiryF), x);
+    vals.reduce((acc, cur) => cur.answer(x, 'reduced', InquiryF), x);
 
 const InquiryF = (x: Inquiry): InquiryMonad => ({
     // Inquire: core method
@@ -289,7 +289,7 @@ const InquiryF = (x: Inquiry): InquiryMonad => ({
             .then(buildInqF(x))
             .then(i => (i.isInquiry ? i.join() : i))
             .then(y => (y.fail.isEmpty() ? f(y.pass) : InquiryF(y)))
-            .catch(err => console.error("err", err)),
+            .catch(err => console.error('err', err)),
 
     // If fails, handoff aggregated fails to supplied function; if no fails, return existing InquiryF
     faulted: async (f: Function): Promise<InquiryMonad | Array<any>> =>
@@ -341,7 +341,7 @@ const exportInquiryF = {
 };
 
 const buildInq = (x: any) => (vals: Array<any>) =>
-    vals.reduce((acc, cur) => cur.answer(x, "reduced", InquiryP), x);
+    vals.reduce((acc, cur) => cur.answer(x, 'reduced', InquiryP), x);
 
 const InquiryP = (x: Inquiry): InquiryMonad => ({
     // Inquire: core method
@@ -444,7 +444,7 @@ const InquiryP = (x: Inquiry): InquiryMonad => ({
             .then(buildInq(x))
             .then(i => (i.isInquiry ? i.join() : i))
             .then(y => (y.fail.isEmpty() ? f(y.pass) : InquiryP(y)))
-            .catch(err => console.error("err", err)),
+            .catch(err => console.error('err', err)),
 
     // If fails, handoff aggregated fails to supplied function; if no fails, return existing InquiryP
     faulted: async (f: Function): Promise<InquiryMonad | Array<any>> =>

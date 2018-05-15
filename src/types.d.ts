@@ -1,4 +1,4 @@
-declare module "simple-maybe";
+declare module 'simple-maybe';
 
 interface Monad {
     map: Function;

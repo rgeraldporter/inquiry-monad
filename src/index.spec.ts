@@ -1,24 +1,24 @@
-import { Inquiry, InquiryF, InquiryP, Fail, Pass } from "./index";
-import * as R from "ramda";
-import "jasmine";
-import { Maybe } from "simple-maybe";
-import Future from "fluture";
+import { Inquiry, InquiryF, InquiryP, Fail, Pass } from './index';
+import * as R from 'ramda';
+import 'jasmine';
+import { Maybe } from 'simple-maybe';
+import Future from 'fluture';
 
 const oldEnough = (a: any) =>
-    a.age > 13 ? Pass(["old enough"]) : Fail(["not old enough"]);
+    a.age > 13 ? Pass(['old enough']) : Fail(['not old enough']);
 
-const findHeight = () => Pass([{ height: 110, in: "cm" }]);
+const findHeight = () => Pass([{ height: 110, in: 'cm' }]);
 const nameSpelledRight = (a: any) =>
-    a.name === "Ron"
-        ? Pass("Spelled correctly")
+    a.name === 'Ron'
+        ? Pass('Spelled correctly')
         : Fail(["Name wasn't spelled correctly"]);
 const hasRecords = () => Pass([{ records: [1, 2, 3] }]);
-const mathGrade = () => Fail(["Failed at math"]);
+const mathGrade = () => Fail(['Failed at math']);
 
 function resolveAfter2Seconds(x: any) {
     return new Promise(resolve => {
         setTimeout(() => {
-            resolve(Pass("passed"));
+            resolve(Pass('passed'));
         }, 2000);
     });
 }
@@ -26,18 +26,17 @@ function resolveAfter2Seconds(x: any) {
 function resolveAfter1Second(x: any) {
     return new Promise(resolve => {
         setTimeout(() => {
-            resolve(Pass("passed"));
+            resolve(Pass('passed'));
         }, 1000);
     });
 }
 
-const resolveAfter1SecondF = (x: any) => Future.after(1000, Pass("passed"));
+const resolveAfter1SecondF = (x: any) => Future.after(1000, Pass('passed'));
 
-describe("The module", () => {
-
-    it("should be able to make many checks, including async ones, and run a conclude and return the subject unchanged", () => {
+describe('The module', () => {
+    it('should be able to make many checks, including async ones, and run a conclude and return the subject unchanged', () => {
         return (InquiryP as any)
-            .subject({ name: "test", age: 10, description: "blah" })
+            .subject({ name: 'test', age: 10, description: 'blah' })
             .inquire(oldEnough)
             .inquire(findHeight)
             .inquire(resolveAfter2Seconds)
@@ -53,28 +52,28 @@ describe("The module", () => {
                 },
                 (y: PassMonad) => {
                     expect(y.inspect()).toBe(
-                        "Pass([object Object],[object Object],passed)"
+                        'Pass([object Object],[object Object],passed)'
                     );
                     return y;
                 }
             )
             .then((x: any) => {
                 expect(x.subject.join()).toEqual({
-                    name: "test",
+                    name: 'test',
                     age: 10,
-                    description: "blah"
+                    description: 'blah'
                 });
                 expect(R.head(x.pass.join())).toEqual({
                     // @ts-ignore
                     height: 110,
-                    in: "cm"
+                    in: 'cm'
                 });
             });
     });
 
-    it("should be able to make many checks and run a fork", () => {
+    it('should be able to make many checks and run a fork', () => {
         const result = (Inquiry as any)
-            .subject({ name: "test", age: 14, description: "blah" })
+            .subject({ name: 'test', age: 14, description: 'blah' })
             .inquire(oldEnough)
             .inquire(findHeight)
             .inquire(nameSpelledRight)
@@ -88,22 +87,22 @@ describe("The module", () => {
                     return x.join();
                 },
                 (y: PassMonad) => {
-                    expect(y.inspect()).toBe("this should not run");
+                    expect(y.inspect()).toBe('this should not run');
                     return y.join();
                 }
             );
     });
 
-    it("should be able to merge a sub-inquiry into a master inquiry", () => {
+    it('should be able to merge a sub-inquiry into a master inquiry', () => {
         const evaluateHealth = (a: any) =>
             (Inquiry as any)
                 .subject(a)
-                .inquire(() => Pass("Passed something"))
-                .inquire(() => Fail("Failed something"))
-                .inquire(() => Fail("Failed something else"));
+                .inquire(() => Pass('Passed something'))
+                .inquire(() => Fail('Failed something'))
+                .inquire(() => Fail('Failed something else'));
 
         const result = (Inquiry as any)
-            .subject({ name: "test", age: 14, description: "blah" })
+            .subject({ name: 'test', age: 14, description: 'blah' })
             .inquire(oldEnough)
             .inquire(findHeight)
             .inquire(nameSpelledRight)
@@ -119,25 +118,25 @@ describe("The module", () => {
                 },
                 (y: PassMonad) => {
                     expect(y.inspect()).toBe(
-                        "Pass(old enough,[object Object],[object Object],Passed something)"
+                        'Pass(old enough,[object Object],[object Object],Passed something)'
                     );
                     return y.join();
                 }
             );
     });
 
-    it("should be able to be stopped in the middle of processing with a breakpoint if there are failures", () => {
+    it('should be able to be stopped in the middle of processing with a breakpoint if there are failures', () => {
         const evaluateHealth = (a: any) =>
             (Inquiry as any)
                 .subject(a)
-                .inquire(() => Pass("Passed something"))
-                .inquire(() => Fail("Failed something"))
-                .inquire(() => Fail("Failed something else"));
+                .inquire(() => Pass('Passed something'))
+                .inquire(() => Fail('Failed something'))
+                .inquire(() => Fail('Failed something else'));
 
         let reachedBreakpoint = 0;
 
         const result = (Inquiry as any)
-            .subject({ name: "test", age: 11, description: "blah" })
+            .subject({ name: 'test', age: 11, description: 'blah' })
             .inquire(oldEnough)
             .breakpoint((x: any) => {
                 // clearing the existing failure, it will not appear at the end
@@ -156,32 +155,32 @@ describe("The module", () => {
                         "Fail(Name wasn't spelled correctly,Failed at math,Failed something,Failed something else)"
                     );
                     expect(x.head()).toEqual("Name wasn't spelled correctly");
-                    expect(x.tail()).toEqual("Failed something else");
+                    expect(x.tail()).toEqual('Failed something else');
                     return x.join();
                 },
                 (y: PassMonad) => {
                     expect(y.inspect()).toBe(
-                        "Pass([object Object],[object Object],Passed something)"
+                        'Pass([object Object],[object Object],Passed something)'
                     );
-                    expect(y.head()).toEqual({ height: 110, in: "cm" });
-                    expect(y.tail()).toEqual("Passed something");
+                    expect(y.head()).toEqual({ height: 110, in: 'cm' });
+                    expect(y.tail()).toEqual('Passed something');
                     return y.join();
                 }
             );
     });
 
-    it("should be able to be stopped in the middle of processing with a milestone if there are passes", () => {
+    it('should be able to be stopped in the middle of processing with a milestone if there are passes', () => {
         const evaluateHealth = (a: any) =>
             (Inquiry as any)
                 .subject(a)
-                .inquire(() => Pass("Passed something"))
-                .inquire(() => Fail("Failed something"))
-                .inquire(() => Fail("Failed something else"));
+                .inquire(() => Pass('Passed something'))
+                .inquire(() => Fail('Failed something'))
+                .inquire(() => Fail('Failed something else'));
 
         let reachedBreakpoint = 0;
 
         const result = (Inquiry as any)
-            .subject({ name: "test", age: 11, description: "blah" })
+            .subject({ name: 'test', age: 11, description: 'blah' })
             .inquire(oldEnough)
             .milestone((x: any) => {
                 // clearing the existing failure, it will not appear at the end
@@ -203,16 +202,16 @@ describe("The module", () => {
                 },
                 (y: PassMonad) => {
                     expect(y.inspect()).toBe(
-                        "Pass([object Object],[object Object],Passed something)"
+                        'Pass([object Object],[object Object],Passed something)'
                     );
                     return y.join();
                 }
             );
     });
 
-    it("should be able to make many checks, including async ones, and run a faulted unwrap", () => {
+    it('should be able to make many checks, including async ones, and run a faulted unwrap', () => {
         return (InquiryP as any)
-            .subject({ name: "test", age: 10, description: "blah" })
+            .subject({ name: 'test', age: 10, description: 'blah' })
             .inquire(oldEnough)
             .inquire(findHeight)
             .inquire(resolveAfter1Second)
@@ -227,9 +226,9 @@ describe("The module", () => {
             });
     });
 
-    it("should be able to make many checks, including async ones, and run a faulted unwrap", () => {
+    it('should be able to make many checks, including async ones, and run a faulted unwrap', () => {
         return (InquiryF as any)
-            .subject({ name: "test", age: 10, description: "blah" })
+            .subject({ name: 'test', age: 10, description: 'blah' })
             .inquire(oldEnough)
             .inquire(findHeight)
             .inquire(resolveAfter1SecondF)
@@ -245,9 +244,9 @@ describe("The module", () => {
         //console.log('x', x);
     });
 
-    it("should be able to make many checks, including async ones, and run a cleared unwrap when all passes", () => {
+    it('should be able to make many checks, including async ones, and run a cleared unwrap when all passes', () => {
         return (InquiryP as any)
-            .subject({ name: "test", age: 14, description: "blah" })
+            .subject({ name: 'test', age: 14, description: 'blah' })
             .inquire(oldEnough)
             .inquire(findHeight)
             .inquire(resolveAfter1Second)
@@ -261,7 +260,7 @@ describe("The module", () => {
     });
 
     // due to old prototype method
-    it("should not have prototype pollution", () => {
+    it('should not have prototype pollution', () => {
         expect(InquiryP.subject === InquiryF.subject).toBe(false);
     });
 });
