@@ -1,4 +1,4 @@
-import { Inquiry, InquiryF, InquiryP, Fail, Pass } from './index';
+import { Inquiry, InquiryP, Fail, Pass } from './index';
 import * as R from 'ramda';
 import 'jasmine';
 import { Maybe } from 'simple-maybe';
@@ -30,8 +30,6 @@ function resolveAfter1Second(x: any) {
         }, 1000);
     });
 }
-
-const resolveAfter1SecondF = (x: any) => Future.after(1000, Pass('passed'));
 
 describe('The module', () => {
     it('should be able to make many checks, including async ones, and run a conclude and return the subject unchanged', () => {
@@ -226,24 +224,6 @@ describe('The module', () => {
             });
     });
 
-    it('should be able to make many checks, including async ones, and run a faulted unwrap', () => {
-        return (InquiryF as any)
-            .subject({ name: 'test', age: 10, description: 'blah' })
-            .inquire(oldEnough)
-            .inquire(findHeight)
-            .inquire(resolveAfter1SecondF)
-            .inquire(nameSpelledRight)
-            .inquire(hasRecords)
-            .inquire(mathGrade)
-            .faulted((x: any) => {
-                expect(x.inspect()).toBe(
-                    "Fail(not old enough,Name wasn't spelled correctly,Failed at math)"
-                );
-                return x;
-            });
-        //console.log('x', x);
-    });
-
     it('should be able to make many checks, including async ones, and run a cleared unwrap when all passes', () => {
         return (InquiryP as any)
             .subject({ name: 'test', age: 14, description: 'blah' })
@@ -257,10 +237,5 @@ describe('The module', () => {
                 );
                 return x;
             });
-    });
-
-    // due to old prototype method
-    it('should not have prototype pollution', () => {
-        expect(InquiryP.subject === InquiryF.subject).toBe(false);
     });
 });
