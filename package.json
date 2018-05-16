@@ -1,6 +1,6 @@
 {
   "name": "inquiry-monad",
-  "version": "0.15.0",
+  "version": "0.15.1",
   "description": "",
   "main": "built/index.js",
   "scripts": {
@@ -25,7 +25,6 @@
     "typescript": "2.8.3"
   },
   "dependencies": {
-    "fluture": "8.0.2",
     "simple-maybe": "0.3.5"
   }
 }
