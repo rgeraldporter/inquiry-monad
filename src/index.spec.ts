@@ -32,6 +32,29 @@ function resolveAfter1Second(x: any) {
 }
 
 describe('The module', () => {
+
+    it('should be able to make many checks and run a fork', () => {
+        const result = (Inquiry as any)
+            .subject({ name: 'test', age: 14, description: 'blah' })
+            .inquire(oldEnough)
+            .inquire(findHeight)
+            .inquire(nameSpelledRight)
+            .inquire(hasRecords)
+            .inquire(mathGrade)
+            .fork(
+                (x: FailMonad) => {
+                    expect(x.inspect()).toBe(
+                        "Fail(Name wasn't spelled correctly,Failed at math)"
+                    );
+                    return x.join();
+                },
+                (y: PassMonad) => {
+                    expect(y.inspect()).toBe('this should not run');
+                    return y.join();
+                }
+            );
+    });
+
     it('should be able to make many checks, including async ones, and run a conclude and return the subject unchanged', () => {
         return (InquiryP as any)
             .subject({ name: 'test', age: 10, description: 'blah' })
@@ -69,28 +92,6 @@ describe('The module', () => {
             });
     });
 
-    it('should be able to make many checks and run a fork', () => {
-        const result = (Inquiry as any)
-            .subject({ name: 'test', age: 14, description: 'blah' })
-            .inquire(oldEnough)
-            .inquire(findHeight)
-            .inquire(nameSpelledRight)
-            .inquire(hasRecords)
-            .inquire(mathGrade)
-            .fork(
-                (x: FailMonad) => {
-                    expect(x.inspect()).toBe(
-                        "Fail(Name wasn't spelled correctly,Failed at math)"
-                    );
-                    return x.join();
-                },
-                (y: PassMonad) => {
-                    expect(y.inspect()).toBe('this should not run');
-                    return y.join();
-                }
-            );
-    });
-
     it('should be able to merge a sub-inquiry into a master inquiry', () => {
         const evaluateHealth = (a: any) =>
             (Inquiry as any)
@@ -108,7 +109,7 @@ describe('The module', () => {
             .inquire(mathGrade)
             .inquire(evaluateHealth)
             .conclude(
-                (x: any) => {
+                (x: FailMonad) => {
                     expect(x.inspect()).toBe(
                         "Fail(Name wasn't spelled correctly,Failed at math,Failed something,Failed something else)"
                     );
@@ -136,11 +137,13 @@ describe('The module', () => {
         const result = (Inquiry as any)
             .subject({ name: 'test', age: 11, description: 'blah' })
             .inquire(oldEnough)
-            .breakpoint((x: any) => {
+            .breakpoint((x: Inquiry) => {
                 // clearing the existing failure, it will not appear at the end
-                // this is not a practice example, usually one one do some kind of exit
+                // this is not a practical example, usually one one do some kind of exit
+                reachedBreakpoint = 1;
                 x.fail = Fail([]);
-                return Inquiry.subject(x);
+
+                return Inquiry.of(x);
             })
             .inquire(findHeight)
             .inquire(nameSpelledRight)
@@ -148,12 +151,13 @@ describe('The module', () => {
             .inquire(mathGrade)
             .inquire(evaluateHealth)
             .conclude(
-                (x: any) => {
+                (x: FailMonad) => {
                     expect(x.inspect()).toBe(
                         "Fail(Name wasn't spelled correctly,Failed at math,Failed something,Failed something else)"
                     );
                     expect(x.head()).toEqual("Name wasn't spelled correctly");
                     expect(x.tail()).toEqual('Failed something else');
+                    expect(reachedBreakpoint).toEqual(1);
                     return x.join();
                 },
                 (y: PassMonad) => {
@@ -175,32 +179,34 @@ describe('The module', () => {
                 .inquire(() => Fail('Failed something'))
                 .inquire(() => Fail('Failed something else'));
 
-        let reachedBreakpoint = 0;
+        let reachedMilestone = 0;
 
         const result = (Inquiry as any)
             .subject({ name: 'test', age: 11, description: 'blah' })
             .inquire(oldEnough)
-            .milestone((x: any) => {
-                // clearing the existing failure, it will not appear at the end
-                // this is not a practice example, usually one one do some kind of exit
-                x.pass = Pass([]);
-                return Inquiry.subject(x);
-            })
             .inquire(findHeight)
+            .milestone((x: Inquiry) => {
+                // clearing the existing pass, it will not appear at the end
+                // this is not a practical example, usually one one do some kind of exit
+                reachedMilestone = 1;
+                x.pass = Pass([]);
+                return Inquiry.of(x);
+            })
             .inquire(nameSpelledRight)
             .inquire(hasRecords)
             .inquire(mathGrade)
             .inquire(evaluateHealth)
             .conclude(
-                (x: any) => {
+                (x: FailMonad) => {
                     expect(x.inspect()).toBe(
                         "Fail(not old enough,Name wasn't spelled correctly,Failed at math,Failed something,Failed something else)"
                     );
+                    expect(reachedMilestone).toEqual(1);
                     return x.join();
                 },
                 (y: PassMonad) => {
                     expect(y.inspect()).toBe(
-                        'Pass([object Object],[object Object],Passed something)'
+                        'Pass([object Object],Passed something)'
                     );
                     return y.join();
                 }
@@ -216,7 +222,7 @@ describe('The module', () => {
             .inquire(nameSpelledRight)
             .inquire(hasRecords)
             .inquire(mathGrade)
-            .faulted((x: any) => {
+            .faulted((x: FailMonad) => {
                 expect(x.inspect()).toBe(
                     "Fail(not old enough,Name wasn't spelled correctly,Failed at math)"
                 );
@@ -231,7 +237,7 @@ describe('The module', () => {
             .inquire(findHeight)
             .inquire(resolveAfter1Second)
             .inquire(hasRecords)
-            .faulted((x: any) => {
+            .faulted((x: FailMonad) => {
                 expect(x.inspect()).toBe(
                     "Fail(not old enough,Name wasn't spelled correctly,Failed at math)"
                 );

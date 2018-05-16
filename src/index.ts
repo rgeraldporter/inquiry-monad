@@ -75,8 +75,9 @@ const Fail = (x: any): FailMonad => ({
 
 // 1. ✅ break out into: Inquiry() InquiryPromise() (or PromisedInquiry) and FutureInquiry() (or InquiryFuture)
 // 2. ✅ promise-based version will use IOUs still, can use something like .await() if need to wait for data
-// 3. Each Pass or Fail should now be Pass(['fnName', result]); -- e.g. Pass([['fnName', result], ['otherFn', result2]]);
-// 4. add fns to handle retrieving data insight within Pass & Fail
+// 3. ❌ (rejecting) Each Pass or Fail should now be Pass(['fnName', result]); -- e.g. Pass([['fnName', result], ['otherFn', result2]]);
+// 4. ❌ add fns to handle retrieving data insight within Pass & Fail
+// 5. Give errors when wrong type used in [].of
 
 const Inquiry = (x: Inquiry): InquiryMonad => ({
     // Inquire: core method
@@ -187,7 +188,8 @@ const exportInquiry = {
                   pass: Pass([]),
                   iou: IOU([]),
                   informant: (_: any) => _
-              })
+              }),
+    of: (x: Inquiry) => Inquiry(x)
 };
 
 const buildInq = (x: any) => (vals: Array<any>) =>
@@ -330,7 +332,7 @@ const InquiryP = (x: Inquiry): InquiryMonad => ({
 });
 
 const exportInquiryP = {
-    subject: (x: any) =>
+    subject: (x:  any) =>
         x.isInquiry
             ? x
             : InquiryP({
@@ -339,7 +341,8 @@ const exportInquiryP = {
                   pass: Pass([]),
                   iou: IOU([]),
                   informant: (_: any) => _
-              })
+              }),
+    of: (x: Inquiry) => InquiryP(x)
 };
 
 export {
