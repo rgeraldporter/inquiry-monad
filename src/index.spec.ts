@@ -1,4 +1,4 @@
-import { Inquiry, InquiryP, Fail, Pass } from './index';
+import { Inquiry, InquiryP, Fail, Pass, IOU } from './index';
 import * as R from 'ramda';
 import 'jasmine';
 import { Maybe } from 'simple-maybe';
@@ -32,6 +32,99 @@ function resolveAfter1Second(x: any) {
 }
 
 describe('The module', () => {
+    it('should satisfy the first monad law of left identity', () => {
+        // this is trickier to do with a typed monad, but not impossible
+        // we cannot just do some simple math as the value much adhere to type Inquiry
+        // but the law seems to be provable with objects as much as they are with numbers
+        const a: Inquiry = {
+            subject: Maybe.of(1),
+            fail: Fail([]),
+            pass: Pass([]),
+            iou: IOU([]),
+            informant: (_: any) => _
+        };
+
+        const f = (n: Inquiry): InquiryMonad =>
+            Inquiry.of(
+                Object.assign(n, {
+                    subject: n.subject.map((x: number) => x + 1)
+                })
+            );
+
+        // 1. unit(x).chain(f) ==== f(x)
+        const leftIdentity1 = Inquiry.of(a).chain(f);
+        const leftIdentity2 = f(a);
+
+        expect(leftIdentity1.join()).toEqual(leftIdentity2.join());
+
+        const g = (n: Inquiry): InquiryMonad =>
+            Inquiry.of(
+                Object.assign(n, {
+                    subject: n.subject.map((x: number) => ({
+                        value: x * 10,
+                        string: `Something with the number ${x}`
+                    }))
+                })
+            );
+
+        // 1. Inquiry.of(x).chain(f) ==== f(x)
+        const leftIdentity3 = Inquiry.of(a).chain(g);
+        const leftIdentity4 = g(a);
+
+        expect(leftIdentity3.join()).toEqual(leftIdentity4.join());
+    });
+
+    it('should satisfy the second monad law of right identity', () => {
+        const a: Inquiry = {
+            subject: Maybe.of(3),
+            fail: Fail([]),
+            pass: Pass([]),
+            iou: IOU([]),
+            informant: (_: any) => _
+        };
+
+        const rightIdentity1 = Inquiry.of(a).chain(Inquiry.of);
+        const rightIdentity2 = Inquiry.of(a);
+
+        // 2. m.chain(unit) ==== m
+        expect(rightIdentity1.join()).toEqual(rightIdentity2.join());
+    });
+
+    it('should satisfy the third monad law of associativity', () => {
+        const a: Inquiry = {
+            subject: Maybe.of(30),
+            fail: Fail([]),
+            pass: Pass([]),
+            iou: IOU([]),
+            informant: (_: any) => _
+        };
+
+        const g = (n: Inquiry): InquiryMonad =>
+            Inquiry.of(
+                Object.assign(n, {
+                    subject: n.subject.map((x: number) => ({
+                        value: x * 10,
+                        string: `Something with the number ${x}`
+                    }))
+                })
+            );
+        const f = (n: Inquiry): InquiryMonad =>
+            Inquiry.of(
+                Object.assign(n, {
+                    subject: n.subject.map((x: number) => x + 1)
+                })
+            );
+
+        // 3. m.chain(f).chain(g) ==== m.chain(x => f(x).chain(g))
+        const associativity1 = Inquiry.of(a)
+            .chain(g)
+            .chain(f);
+        const associativity2 = Inquiry.of(a).chain((x: Inquiry) =>
+            g(x).chain(f)
+        );
+
+        expect(associativity1.join()).toEqual(associativity2.join());
+    });
 
     it('should be able to make many checks and run a fork', () => {
         const result = (Inquiry as any)
