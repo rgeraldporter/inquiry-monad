@@ -1,5 +1,5 @@
 # Inquiry Monad
-### v0.16.1
+### v0.16.3
 
 Experiment with aggregate Left/Right monad running parallel. More details when it is better fleshed out.
 
