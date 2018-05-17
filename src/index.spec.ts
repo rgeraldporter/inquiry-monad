@@ -2,7 +2,6 @@ import { Inquiry, InquiryP, Fail, Pass, IOU } from './index';
 import * as R from 'ramda';
 import 'jasmine';
 import { Maybe } from 'simple-maybe';
-import Future from 'fluture';
 
 const oldEnough = (a: any) =>
     a.age > 13 ? Pass(['old enough']) : Fail(['not old enough']);
