@@ -1,32 +1,33 @@
 import { Maybe } from 'simple-maybe';
 
-const IOU = (x: any): IOUMonad => ({
+const IOU = <T>(x: T | Array<T>): IOUMonad => ({
     map: (f: Function) => IOU(f(x)),
     chain: (f: Function) => f(x),
     ap: (y: Monad) => y.map(x),
     inspect: () => <string>`IOU(${x})`,
     join: () => x,
-    concat: (o: IOUMonad) => o.chain((r: any) => IOU(x.concat(r))),
-    head: () => (x.length ? x[0] : []),
-    tail: () => (x.length ? x[x.length - 1] : []),
-    isEmpty: () => Boolean(!x.length),
+    concat: (o: IOUMonad) =>
+        o.chain((r: any) => IOU((x as Array<T>).concat(r))),
+    head: () => (Array.isArray(x) && x.length ? x[0] : []),
+    tail: () => (Array.isArray(x) && x.length ? x[x.length - 1] : []),
+    isEmpty: () => Boolean(!Array.isArray(x) || x.length === 0),
     isInquiry: false,
     isPass: false,
     isFail: false,
     isIOU: true
-    // @todo isIOU ? isInquiry ?
 });
 
-const Pass = (x: any): PassMonad => ({
+const Pass = <T>(x: Array<T> | T): PassMonad => ({
     map: (f: Function) => Pass(f(x)),
     chain: (f: Function) => f(x),
     fold: (f: Function, _: Function) => f(x),
     fork: (_: Function, f: Function) => f(x),
-    head: () => (x.length ? x[0] : []),
-    tail: () => (x.length ? x[x.length - 1] : []),
+    head: () => (Array.isArray(x) && x.length ? x[0] : []),
+    tail: () => (Array.isArray(x) && x.length ? x[x.length - 1] : []),
     join: () => x,
     inspect: () => <string>`Pass(${x})`,
-    concat: (o: PassFailMonad) => o.fold((r: any) => Pass(x.concat(r)), null),
+    concat: (o: PassFailMonad) =>
+        o.fold((r: any) => Pass((x as Array<T>).concat(r)), null),
     ap: (y: PassFailMonad) => (y.isPass ? y.concat(Pass(x)) : Pass(x)),
     answer: (i: Inquiry, n: string = '(anonymous)', c: Function = Inquiry) => {
         i.informant([n, Pass(x)]);
@@ -38,23 +39,24 @@ const Pass = (x: any): PassMonad => ({
             informant: i.informant
         });
     },
-    isEmpty: () => Boolean(!x.length),
+    isEmpty: () => Boolean(!Array.isArray(x) || x.length === 0),
     isPass: true,
     isFail: false,
     isIOU: false,
     isInquiry: false
 });
 
-const Fail = (x: any): FailMonad => ({
+const Fail = <T>(x: Array<T> | T): FailMonad => ({
     map: (f: Function) => Fail(f(x)),
     chain: (f: Function) => f(x),
     fold: (_: Function, f: Function) => f(x),
     fork: (f: Function, _: Function) => f(x),
-    head: () => (x.length ? x[0] : []),
-    tail: () => (x.length ? x[x.length - 1] : []),
+    head: () => (Array.isArray(x) && x.length ? x[0] : []),
+    tail: () => (Array.isArray(x) && x.length ? x[x.length - 1] : []),
     join: () => x,
     inspect: () => <string>`Fail(${x})`,
-    concat: (o: PassFailMonad) => o.fork((r: any) => Fail(x.concat(r)), null),
+    concat: (o: PassFailMonad) =>
+        o.fork((r: any) => Fail((x as Array<T>).concat(r)), null),
     ap: (y: PassFailMonad) => (y.isPass ? Fail(x) : y.concat(Fail(x))),
     answer: (i: Inquiry, n: string = '(anonymous)', c: Function = Inquiry) => {
         i.informant([n, Fail(x)]);
@@ -66,12 +68,25 @@ const Fail = (x: any): FailMonad => ({
             informant: i.informant
         });
     },
-    isEmpty: () => Boolean(!x.length),
+    isEmpty: () => Boolean(!Array.isArray(x) || x.length === 0),
     isPass: false,
     isFail: true,
     isIOU: false,
     isInquiry: false
 });
+
+const InquirySubject = <T>(x: T | InquiryMonad) =>
+    'isInquiry' in (x as T)
+        ? x
+        : Inquiry({
+              subject: Maybe.of(x),
+              fail: Fail([]),
+              pass: Pass([]),
+              iou: IOU([]),
+              informant: <T>(_: T) => _
+          });
+
+const InquiryOf = (x: Inquiry) => Inquiry(x);
 
 // 1. ✅ break out into: Inquiry() InquiryPromise() (or PromisedInquiry) and FutureInquiry() (or InquiryFuture)
 // 2. ✅ promise-based version will use IOUs still, can use something like .await() if need to wait for data
@@ -127,7 +142,7 @@ const Inquiry = (x: Inquiry): InquiryMonad => ({
         }),
 
     // standard Monad methods
-    map: (f: Function): Inquiry => (Inquiry as any).subject(f(x)), // cast required for now
+    map: (f: Function): Inquiry => InquirySubject(f(x)),
     ap: (y: Monad) => y.map(x),
     chain: (f: Function) => f(x),
     join: (): Inquiry => x,
@@ -153,7 +168,7 @@ const Inquiry = (x: Inquiry): InquiryMonad => ({
     // Unwrap methods
 
     // unwraps, mapping for both branches, full value returned
-    conclude: (f: Function, g: Function): any => ({
+    conclude: (f: Function, g: Function): Inquiry => ({
         subject: x.subject,
         iou: x.iou,
         fail: f(x.fail),
@@ -162,13 +177,13 @@ const Inquiry = (x: Inquiry): InquiryMonad => ({
     }),
 
     // If no fails, handoff aggregated passes to supplied function; if fails, return existing Inquiry
-    cleared: (f: Function): any => (x.fail.isEmpty() ? f(x.pass) : Inquiry(x)),
+    cleared: (f: Function) => (x.fail.isEmpty() ? f(x.pass) : Inquiry(x)),
 
     // If fails, handoff aggregated fails to supplied function; if no fails, return existing Inquiry
-    faulted: (f: Function): any => (x.fail.isEmpty() ? Inquiry(x) : f(x.fail)),
+    faulted: (f: Function) => (x.fail.isEmpty() ? Inquiry(x) : f(x.fail)),
 
     // unwrap left if fails, right if not
-    fork: (f: Function, g: Function): any =>
+    fork: (f: Function, g: Function) =>
         x.fail.join().length ? f(x.fail) : g(x.pass),
 
     // return a merged pass/fail
@@ -179,20 +194,24 @@ const Inquiry = (x: Inquiry): InquiryMonad => ({
 });
 
 const exportInquiry = {
-    subject: (x: any) =>
-        x.isInquiry
-            ? x
-            : Inquiry({
-                  subject: Maybe.of(x),
-                  fail: Fail([]),
-                  pass: Pass([]),
-                  iou: IOU([]),
-                  informant: (_: any) => _
-              }),
-    of: (x: Inquiry) => Inquiry(x)
+    subject: InquirySubject,
+    of: InquiryOf
 };
 
-const buildInq = (x: any) => (vals: Array<any>) =>
+const InquiryPSubject =<T> (x: T | InquiryMonad) =>
+    'isInquiry' in (x as T)
+        ? x
+        : InquiryP({
+              subject: Maybe.of(x),
+              fail: Fail([]),
+              pass: Pass([]),
+              iou: IOU([]),
+              informant: <T>(_: T) => _
+          });
+
+const InquiryPOf = (x: Inquiry) => InquiryP(x);
+
+const buildInq = <T>(x: T) => (vals: Array<any>) =>
     vals.reduce((acc, cur) => cur.answer(x, 'reduced', InquiryP), x);
 
 const InquiryP = (x: Inquiry): InquiryMonad => ({
@@ -252,7 +271,7 @@ const InquiryP = (x: Inquiry): InquiryMonad => ({
         }),
 
     // Standard monad methods - note that while these work, remember that `x` is a typed Object
-    map: (f: Function): Inquiry => (InquiryP as any).subject(f(x)), // cast required for now
+    map: (f: Function): Inquiry => InquiryPSubject(f(x)), // cast required for now
     ap: (y: Monad) => y.map(x),
     chain: (f: Function) => f(x),
     join: (): Inquiry => x,
@@ -320,7 +339,6 @@ const InquiryP = (x: Inquiry): InquiryMonad => ({
             .then(y => f(y.fail.join().concat(y.pass.join()))),
 
     // await all IOUs to resolve, then return a new Inquiry
-    // @todo: awaitP, awaitF that return an InquiryP or InquiryF
     await: async (): Promise<InquiryMonad> =>
         Promise.all(x.iou.join())
             .then(buildInq(x))
@@ -328,21 +346,11 @@ const InquiryP = (x: Inquiry): InquiryMonad => ({
             .then(y => Inquiry(y)),
 
     isInquiry: true
-    //@todo determine if we could zip "in order of tests"
 });
 
 const exportInquiryP = {
-    subject: (x:  any) =>
-        x.isInquiry
-            ? x
-            : InquiryP({
-                  subject: Maybe.of(x),
-                  fail: Fail([]),
-                  pass: Pass([]),
-                  iou: IOU([]),
-                  informant: (_: any) => _
-              }),
-    of: (x: Inquiry) => InquiryP(x)
+    subject: InquiryPSubject,
+    of: InquiryPOf
 };
 
 export {
