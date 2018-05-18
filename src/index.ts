@@ -324,7 +324,7 @@ const InquiryP = (x: Inquiry): InquiryMonad => ({
             .then(i => (i.isInquiry ? i.join() : i))
             .then(y => (y.fail.isEmpty() ? InquiryP(y) : f(y.fail))),
 
-    // Take left function and hands off fails if any, otherwise takes left function and hands off passes to that function
+    // Take left function and hands off fails if any, otherwise takes right function and hands off passes to that function
     fork: async (f: Function, g: Function): Promise<Array<any>> =>
         Promise.all(x.iou.join())
             .then(buildInq(x))
@@ -343,7 +343,7 @@ const InquiryP = (x: Inquiry): InquiryMonad => ({
         Promise.all(x.iou.join())
             .then(buildInq(x))
             .then(i => (i.isInquiry ? i.join() : i))
-            .then(y => Inquiry(y)),
+            .then(y => InquiryPOf(y)),
 
     isInquiry: true
 });
