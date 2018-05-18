@@ -1,6 +1,5 @@
 import { Inquiry, InquiryP, Fail, Pass, IOU } from './index';
 import * as R from 'ramda';
-import 'jasmine';
 import { Maybe } from 'simple-maybe';
 
 const oldEnough = (a: any) =>

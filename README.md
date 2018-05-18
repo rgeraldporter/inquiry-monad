@@ -1,5 +1,5 @@
 # Inquiry Monad
-### v0.16.7
+### v0.16.8
 
 [![Build Status](https://travis-ci.com/rgeraldporter/inquiry-monad.svg?branch=master)](https://travis-ci.com/rgeraldporter/inquiry-monad)
 
@@ -328,6 +328,10 @@ _Documentation forthcoming for the following._
 `map`
 `chain`
 `join`
+
+## Development
+
+Source is written in TypeScript. Run tests via `npm run test`.
 
 ## MIT License
 
