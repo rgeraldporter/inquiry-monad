@@ -1,6 +1,7 @@
 # Inquiry Monad
-
 ### v0.16.7
+
+[![Build Status](https://travis-ci.com/rgeraldporter/inquiry-monad.svg?branch=master)](https://travis-ci.com/rgeraldporter/inquiry-monad)
 
 Inquiry chains together functions that test a given value ("subject") and return with a full set of all passes, failures, and the original untouched value.
 
