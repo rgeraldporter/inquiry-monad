@@ -1,7 +1,7 @@
 {
   "name": "inquiry-monad",
-  "version": "0.16.6",
-  "description": "",
+  "version": "0.16.7",
+  "description": "A module for chaining testing functions and returning an aggregate of both passes and failures and the original value. Functional, much like an Either.",
   "main": "built/index.js",
   "scripts": {
     "test": "find ./built -name '*.spec.js' | NODE_ENV=test xargs node ./node_modules/jasmine/bin/jasmine.js",
@@ -15,7 +15,11 @@
     "left",
     "right"
   ],
-  "author": "Rob Porter <rob@weeverapps.com>",
+  "repository": {
+    "url": "git@github.com:rgeraldporter/inquiry-monad.git",
+    "type": "git"
+  },
+  "author": "Robert Gerald Porter <rob@weeverapps.com>",
   "license": "MIT",
   "devDependencies": {
     "@types/jasmine": "2.8.6",
