@@ -1,6 +1,6 @@
 # Inquiry Monad
 
-### v0.16.6
+### v0.16.7
 
 Inquiry chains together functions that test a given value ("subject") and return with a full set of all passes, failures, and the original untouched value.
 
