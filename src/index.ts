@@ -76,7 +76,7 @@ const Fail = <T>(x: Array<T> | T): FailMonad => ({
 });
 
 const InquirySubject = <T>(x: T | InquiryMonad) =>
-    'isInquiry' in (x as T)
+    (x as any).isInquiry
         ? x
         : Inquiry({
               subject: Maybe.of(x),
@@ -87,12 +87,6 @@ const InquirySubject = <T>(x: T | InquiryMonad) =>
           });
 
 const InquiryOf = (x: Inquiry) => Inquiry(x);
-
-// 1. ✅ break out into: Inquiry() InquiryPromise() (or PromisedInquiry) and FutureInquiry() (or InquiryFuture)
-// 2. ✅ promise-based version will use IOUs still, can use something like .await() if need to wait for data
-// 3. ❌ (rejecting) Each Pass or Fail should now be Pass(['fnName', result]); -- e.g. Pass([['fnName', result], ['otherFn', result2]]);
-// 4. ❌ add fns to handle retrieving data insight within Pass & Fail
-// 5. Give errors when wrong type used in [].of
 
 const Inquiry = (x: Inquiry): InquiryMonad => ({
     // Inquire: core method
@@ -108,7 +102,6 @@ const Inquiry = (x: Inquiry): InquiryMonad => ({
     // Informant: for spying/logging/observable
     informant: (f: Function) =>
         Inquiry({
-            // @todo accept array of functions instead, or have a plural version
             subject: x.subject,
             iou: x.iou,
             fail: x.fail,
@@ -190,7 +183,6 @@ const Inquiry = (x: Inquiry): InquiryMonad => ({
     zip: (f: Function): Array<any> => f(x.fail.join().concat(x.pass.join())), // return a concat of pass/fails
 
     isInquiry: true
-    //@todo determine if we could zip "in order of tests"
 });
 
 const exportInquiry = {
@@ -199,7 +191,7 @@ const exportInquiry = {
 };
 
 const InquiryPSubject =<T> (x: T | InquiryMonad) =>
-    'isInquiry' in (x as T)
+    (x as any).isInquiry
         ? x
         : InquiryP({
               subject: Maybe.of(x),
@@ -237,7 +229,6 @@ const InquiryP = (x: Inquiry): InquiryMonad => ({
     // Informant: for spying/logging/observable
     informant: (f: Function) =>
         InquiryP({
-            // @todo accept array of functions instead, or have a plural version
             subject: x.subject,
             iou: x.iou,
             fail: x.fail,
