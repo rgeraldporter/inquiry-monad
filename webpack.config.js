@@ -5,7 +5,7 @@ module.exports = {
         'inquiry-monad.min': './src/index.ts'
     },
     output: {
-        path: path.resolve(__dirname, '_bundles'),
+        path: path.resolve(__dirname, 'bundles'),
         filename: '[name].js',
         libraryTarget: 'umd',
         library: 'InquiryMonad',
