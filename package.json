@@ -1,11 +1,11 @@
 {
   "name": "inquiry-monad",
-  "version": "0.16.18",
+  "version": "0.16.19",
   "description": "A module for chaining testing functions and returning an aggregate of both passes and failures and the original value. Functional, much like an Either.",
   "main": "built/index.js",
   "scripts": {
     "test": "jest",
-    "build": "tsc",
+    "build": "./node_modules/.bin/tsc",
     "postinstall": "npm run build",
     "bundle": "webpack --config webpack.config.js"
   },
@@ -14,7 +14,9 @@
     "inquiry",
     "validation",
     "left",
-    "right"
+    "right",
+    "functional",
+    "either"
   ],
   "repository": {
     "url": "git@github.com:rgeraldporter/inquiry-monad.git",
