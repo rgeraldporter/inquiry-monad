@@ -253,7 +253,7 @@ const InquiryP = (x: Inquiry): InquiryMonad => ({
     unison: (
         f: Function
     ): InquiryMonad => // apply a single map to both fail & pass (e.g. sort), iou untouched
-        InquiryP({
+        InquiryP({ // @todo: determine if there should be an await here??
             subject: x.subject,
             iou: x.iou,
             fail: Fail(f(x.fail.join())),

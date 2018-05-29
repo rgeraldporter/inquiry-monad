@@ -1,15 +1,13 @@
-# Inquiry Monad
-### v0.16.15
+# Inquiry
+### v0.16.16
 
 [![Build Status](https://travis-ci.com/rgeraldporter/inquiry-monad.svg?branch=master)](https://travis-ci.com/rgeraldporter/inquiry-monad)
 
-Inquiry chains together functions that test a given value ("subject") and return with a full set of all passes, failures, and the original untouched value.
+Inquiry chains together functions that test a given value ("subject") and return with a full set of all passes, failures, and the original untouched value. It follows the practices of functional programming -- for those more deeply familiar with functional programming, it is a monad that can be compared with an `Either` or a `Validation`.
 
-It follows the practices of functional programming, and is monad that is similar to an Either or a Validation.
+The methods for inquiry look much like Promises, and you may even use Promises within Inquiry.
 
-If you are familiar with Promises, this will look very similar. The regular `Inquiry` function does not support asyncronous behaviour, however Promises are supported via the `InquiryP` function. (For the more functionally-minded, Futures are supported via `inquiry-monad-futures` package, which uses Fluture.)
-
-## Basic example
+## Basic examples
 
 ```js
 const { Inquiry, InquiryP, Pass, Fail } = require('inquiry-monad');
@@ -64,24 +62,30 @@ InquiryP.subject(subjectDataWithFailure)
 // >> Promise.resolve(result: {subject: {a:1, b:'string', c:true}, pass: Pass(['has a', 'pretend I looked something up in a db']), fail: Fail(['b is invalid', 'has c value']), iou: IOU()})
 ```
 
+While `Inquiry` does not support asyncronous behaviour, Promises are supported via `InquiryP`. This means you will need to declare in advance by using `InquiryP` if you expect any _inquire_ functions to be returning Promises, however it will work fine if none do.
+
+For the more functionally-pure-minded, Futures are supported via `inquiry-monad-futures` package, which uses Fluture. (You will need to install that seperately to use it.)
+
 ## Description
 
-Inquiry can take any value (a subject), store it within an immutable container (`Inquiry` or `InquiryP` monad) to be tested against various functions (via `.inquire` method) and resulting in two or three lists: `Pass([])`, `Fail([])`, and sometimes `IOU([])` in the case of `InquiryP`.
+Inquiry can take any value (known as a _subject_) and test it against various functions via `inquire`s. This results in a return value containing two or three lists: `Pass([])`, `Fail([])` (and, `IOU([])` in the case of `InquiryP`).
 
-The advantage over traditional Promise chains is that the original subject and each result is retained through the resulting chain of functions, giving complete observability over the data passed through. Also, this allows one to restrain Promises to stay with a monadic structure, bolstering immutibility.
+The advantage over traditional Promise chains is that the original subject and each result is retained through the chain of `inquire` functions, giving complete observability over the data lifecycle.
 
-For those who wish to compare to a traditional Left/Right in functional programming, there are many advantages over a Left/Right or Validation pattern from functional:
+Additionally, this allows one to restrain Promises to stay with a monadic structure, bolstering immutibility, and discouraging side-effects.
 
-*   Inquiry aggregates all results, not just failures.
-*   Inquiry can run functions against both sides (traditional Left/Right as Fail/Pass)
-*   Inquiry retains the original subject rather than transforming it into a result
-*   Inquiry is designed to be an expressive, easily understood API
+For those who might wish to compare to a conventional `Either` (`Left`/`Right`) in functional programming, there are many advantages over an `Either` or `Validation` pattern from functional:
 
-## Constructor
+*   Inquiry aggregates *all* results, not just failures.
+*   Inquiry can run functions against both sides (conventional `Left`/`Right` or `Failure`/`Success` as `Fail`/`Pass`)
+*   Inquiry retains the original subject rather than transforming it into the final result
+*   Inquiry is designed to be an expressive, easily understood API, to be understood with little or no functional programming experience
 
-`Inquiry.subject(value)` or `InquiryP.subject(value)` (Promise/async-based)
+# Constructors
 
-Returns an `Inquiry` monad, which is monad containing an object with properties `subject`, `pass`, `fail`, `iou`, and an `informant` method.
+## `Inquiry.subject(value)`
+
+Returns a new `Inquiry` monad, which contains an object with properties `subject`, `pass`, `fail`, `iou`, and a single method,  `informant`.
 
 `subject`: contains `value` passed to `Inquiry.subject` within a `Maybe` monad, meaning it will either be `Just(value)` or `Nothing()`.
 `pass`: contains a `Pass` monad containing an array of values
@@ -89,7 +93,13 @@ Returns an `Inquiry` monad, which is monad containing an object with properties 
 `iou`: contains an `IOU` monad contains an array of Promises (only relevant with `InquiryP`)
 `informant`: contains a function to be called upon the return of a `.inquire` call, for observation or logging purposes (set by calling `.informant` method)
 
-Using the above object structure, you may also assemble your own `Inquiry` monad "manually" with `Inquiry.of`, those this is generally unnecessary.
+## `InquiryP.subject(value)`
+
+Same as the above, however it returns a monad called `InquiryP` which enables Promise/async-based `inquire` usage.
+
+#### Note
+
+Using the above object structure, you may also assemble your own `Inquiry`/`InquiryP` monad "manually" with `Inquiry.of`/`InquiryP.of`, those this is generally unnecessary.
 
 As a basic example:
 
@@ -100,41 +110,52 @@ console.log(
         .informant(console.log)
         .join()
 ); // .join will reveal contained value
+
 // > {subject: Just({something: true}), pass: Pass([]), fail: Fail([]), iou: IOU([]), informant: console.log};
 ```
 
-## Methods
+# `Inquiry` and `InquiryP` Methods
 
-### Core method
+## Core methods
 
-`.inquire(f)` : give inquire a function `f` that returns either a `Pass()`, `Fail()`, Promise (`InquiryP` only), or another `Inquiry`. Anything other than these will be assumed as a `Pass`.
+### `.inquire(f)`
+
+Pass `inquire` a function `f` that returns either a `Pass`, `Fail`, `Promise` (`InquiryP` only), or another `Inquiry`. Anything other than these will be converted to a `Pass`.
 
 ```js
 const isMoreThanOne = x =>
     x > 1 ? Pass('Is greater than 1') : Fail('Is less than or equal to 1');
 
-Inquiry.subject(5)
+const result = Inquiry.subject(5)
     .inquire(isMoreThanOne)
     .join();
+
+console.log(result);
 // > {subject: Just(5), pass: Pass(['Is greater than 1']), fail: Fail([]), iou: IOU([]), informant: _ => _};
 ```
 
-### Interrogative methods:
+### `.inspect()`
 
-`.inspect()` : return a string with the value contained in the Inquiry monad. Used for debugging.
+Return a string with the value contained in the Inquiry monad. This is a common pattern mainly intended for use in debugging.
 
 ```js
 const isMoreThanOne = x =>
     x > 1 ? Pass('Is greater than 1') : Fail('Is less than or equal to 1');
 
-Inquiry.subject(5)
+const result = Inquiry.subject(5)
     .inquire(isMoreThanOne)
     .inspect(); // outputs to string
+
+console.log(result);
 // > Inquiry({subject: Just(5), pass: Pass(['Is greater than 1']), fail: Fail([]), iou: IOU([])});
 ```
 
-`.informant(f)`: call function `f` upon each `.inquire` result. Useful for logging or observing. The function will be passed an array
-containing `['fnName', Pass('passed value')]` or `['fnName', Fail('failed value')]`. Is not run when IOU is added, however does run once the IOU resolves.
+### `.informant(f)`
+
+Call function `f` upon each `inquire` result. Useful for logging or observing. The function will be passed an array
+containing `['fnName', Pass('passed value')]` or `['fnName', Fail('failed value')]`.
+
+For `InquiryP`, it is not run when the IOU is added, however does run upon resolution of the IOU.
 
 ```js
 const isMoreThanOne = x =>
@@ -146,14 +167,68 @@ Inquiry.subject(5)
     .informant(console.log)
     .inquire(isMoreThanOne)
     .inquire(isMoreThanTen);
-// console.log would output:
+
+// console.log would output as each function resolves:
 // > 'isMoreThanOne', Pass('Is greater than 1')
 // > 'isMoreThanTen', Fail('Is less than or equal to 10')
 ```
 
-### Unwrap methods:
+## Unwrap methods:
 
-`.conclude(f, g)`: returns the full `Inquiry`'s value, with map functions applied to both fail (`f`) and pass (`g`), but will wait to resolve all outstanding IOUs (Promises)
+The following methods are to be used as a means of "exiting" the chain.
+
+### `.join()` (only useful for `Inquiry`)
+
+Returns the contained `Inquiry`/`InquiryP` object value, without any additional handling.
+
+This is most basic way of returning the values collected by `Inquiry`.
+
+Warning: this can be, but should not be, used with `InquiryP`as it will not ensure Promises have resolved before returning the value, and will contain these Promises in the `IOU` list.
+
+```js
+const isMoreThanOne = x =>
+    x > 1 ? Pass('Is greater than 1') : Fail('Is less than or equal to 1');
+const isMoreThanTen = x =>
+    x > 10 ? Pass('Is greater than 10') : Fail('Is less than or equal to 10');
+
+const results = Inquiry.subject(5)
+    .informant(console.log)
+    .inquire(isMoreThanOne)
+    .inquire(isMoreThanTen);
+
+console.log(results)
+// > {subject: Just(5), pass: Pass(['Is greater than 1']), fail: Fail(['Is less than or equal to 10']), iou: IOU([]), informant: _ => _};
+```
+
+### `.chain(f)`
+
+Passes the contained `Inquiry`/`InquiryP` object value into a function `f`. (You may optionally continue the Inquiry chain by having function `f` return `Inquiry.of(value)` as long as it adheres to the object structure.)
+
+This is useful when you want to convert `Inquiry`/`InquiryP` into a Promise.
+
+Warning: In the case of `InquiryP`, you will want to use `await` first before using chain (see below).
+```js
+const isMoreThanOne = x =>
+    x > 1 ? Pass('Is greater than 1') : Fail('Is less than or equal to 1');
+const isMoreThanTen = x =>
+    x > 10 ? Pass('Is greater than 10') : Fail('Is less than or equal to 10');
+
+Inquiry.subject(5)
+    .inquire(isMoreThanOne)
+    .inquire(isMoreThanTen)
+    .chain(Promise.resolve)
+    .then(console.log); // now we're a Promise
+
+// > {subject: Just(5), pass: Pass(['Is greater than 1']), fail: Fail(['Is less than or equal to 10']), iou: IOU([]), informant: _ => _};
+```
+
+### `.conclude(f, g)`
+
+Returns the contained `Inquiry`/`InquiryP` object value, with map functions applied to both fail (`f`) and pass (`g`).
+
+For `InquiryP`, this method wwill await resolution of all outstanding IOUs (Promises) before applying `f` and `g`.
+
+This is useful for returning a full accounting of all results and the original subject, in addition to making adjustments based on resulting `Fail` and `Pass` lists.
 
 ```js
 const isMoreThanOne = x =>
@@ -161,7 +236,7 @@ const isMoreThanOne = x =>
 const isMoreThanTen = x =>
     x > 10 ? Pass({ greaterThanTen: true }) : Fail({ greaterThanTen: false });
 
-Inquiry.subject(5)
+const results = Inquiry.subject(5)
     .inquire(isMoreThanOne)
     .inquire(isMoreThanTen)
     .conclude(
@@ -175,10 +250,15 @@ Inquiry.subject(5)
         })
     );
 
+console.log(results);
 // > {subject: Just(5), pass: {passCount: 1, passes: ['Is greater than 1']}, fail: {failCount: 1, fails: ['Is less than or equal to 10']}, iou: IOU([]), informant: _ => _};
 ```
 
-`.fork(f, g)`: exit and either run a function `f` if there are _any_ fails, or `g` if _no_ fails, returning only result of the function executed.
+### `.fork(f, g)`
+
+Either run a function `f` if there are _any_ values in the `Fail` list, or `g` if there are _no_ values in the `Fail` list, returning only the result of the function executed.
+
+This is useful for conventional error-handling, where you wish to favour handling of `Fail` results regardless of any `Pass` results.
 
 ```js
 const isMoreThanOne = x =>
@@ -186,7 +266,7 @@ const isMoreThanOne = x =>
 const isMoreThanTen = x =>
     x > 10 ? Pass({ greaterThanTen: true }) : Fail({ greaterThanTen: false });
 
-Inquiry.subject(5)
+const results1 = Inquiry.subject(5)
     .inquire(isMoreThanOne)
     .inquire(isMoreThanTen)
     .fork(
@@ -200,9 +280,10 @@ Inquiry.subject(5)
         })
     );
 
+console.log(results1);
 // > {failCount: 1, fails: ['Is less than or equal to 10']}
 
-Inquiry.subject(15)
+const results2 = Inquiry.subject(15)
     .inquire(isMoreThanOne)
     .inquire(isMoreThanTen)
     .fork(
@@ -216,10 +297,15 @@ Inquiry.subject(15)
         })
     );
 
+console.log(results2);
 // > {passCount: 2, passes: ['Is greater than 1', 'Is greater than 10']}
 ```
 
-`.zip(f)`: run function `f` against a merged list of `pass` and `fail`
+### `.zip(f)`
+
+Run function `f` against a merged list of `pass` and `fail`, returning the merged list as a resulting `Array`.
+
+This may be useful if you'd like to use the `Inquiry` API but do not necessarily care about `Pass` or `Fail` lists, or you may have already handled them via other means.
 
 ```js
 const isMoreThanOne = x =>
@@ -227,18 +313,50 @@ const isMoreThanOne = x =>
 const isMoreThanTen = x =>
     x > 10 ? Pass({ greaterThanTen: true }) : Fail({ greaterThanTen: false });
 
-Inquiry.subject(5)
+const logResults = someFn; // notify another system about the passes/failures
+
+const results =Inquiry.subject(5)
+    .informant(logResults)
     .inquire(isMoreThanOne)
     .inquire(isMoreThanTen)
-    .zip(console.log);
+    .zip(x => x);
 
-// console.log:
+console.log(results);
 // >> [{greaterThanOne: true}, {greaterThanTen: false}]
 ```
 
-### Early results methods:
+## Early results methods:
 
-`.breakpoint(f)`: run a function `f` only if `fail` has contents. **`f` must return an `Inquiry`**.
+### `.await()` (`InquiryP` only)
+
+Pause and wait for all `iou` Promises to resolve before continuing.
+
+```js
+const isMoreThanOne = x =>
+    x > 1 ? Pass('Is greater than 1') : Fail('Is less than or equal to 1');
+const isMoreThanTen = x =>
+    x > 10 ? Pass('Is greater than 10') : Fail('Is less than or equal to 10');
+const checkDb = async () => Promise.resolve(Pass('here is some data'));
+
+InquiryP.subject(5)
+    .inquire(isMoreThanOne)
+    .inquire(checkDb)
+    .inquire(isMoreThanTen)
+    .await()
+    .chain(console.log);
+
+// > {subject: Just(5), pass: Pass(['Is greater than 1', 'here is some data']), fail: Fail(['Is less than or equal to 10']), iou: IOU([]), informant: _ => _};
+```
+
+### `.breakpoint(f)`
+
+Run a function `f` only if `fail` has contents.
+
+**NOTE: Function `f` must return an `Inquiry`/`InquiryP`, via the constructor `of`**.
+
+The `InquiryP` version of this will wait for outstanding Promises to resolve.
+
+Useful if you'd like to handle `Fail` results early for some reason.
 
 ```js
 const isMoreThanOne = x =>
@@ -264,7 +382,15 @@ Inquiry.subject(5)
     .inquire(isMoreThanTwenty);
 ```
 
-`.milestone(f)`: run a function `f` only if `pass` has contents. **`f` must return an `Inquiry`.**
+### `.milestone(f)`
+
+Run a function `f` only if `pass` has contents. Unlike `fork` or `cleared` this triggers if there are any results in the `Pass` list, regardless of how many results exist within the `Fail` list.
+
+**NOTE: Function `f` must return an `Inquiry`/`InquiryP`, via the constructor `of`**.
+
+The `InquiryP` version of this will wait for outstanding Promises to resolve.
+
+Useful if you'd like to handle `Pass` results early for some reason.
 
 ```js
 const isMoreThanOne = x =>
@@ -290,11 +416,13 @@ Inquiry.subject(5)
     .inquire(isMoreThanTwenty);
 ```
 
-`.await()` (`InquiryP` only): pause and wait for all `iou` Promises to resolve.
+## Multi-map method:
 
-### Multi-map method:
+### `.unison(f)`
 
-`.unison(f)`: run a function `f` against both `pass` and `fail` branches
+Run a function `f` against both `Pass` and `Fail` lists.
+
+Note that in the case of `InquiryP` you may have items in the `IOU` list (unresolved Promises) that are not yet `Fail` or `Pass`, which will be skipped. (To avoid skipping past unresolved Promises, use `await` first.)
 
 ```js
 const isMoreThanOne = x =>
@@ -312,12 +440,27 @@ Inquiry.subject(5)
 // > {subject: Just(5), pass: Pass(['IS GREATER THAN 1']), fail: Fail(['IS LESS THANK OR EQUAL TO 10']), iou: IOU([]), informant: _ => _};
 ```
 
-### Flow-control method:
+## Flow-control method:
 
-`.swap()`: swap the `pass` and `fail` branches
+### `.swap()`
 
+Swap the `pass` and `fail` lists.
+
+This would be useful if you are using `Pass`/`Fail` as a proxy for a less opinionated concept such as functional's `Left`/`Right`.
 ```js
-// example forthcoming
+// @todo more practical example...
+const isMoreThanOne = x =>
+    x > 1 ? Pass('Is greater than 1') : Fail('Is less than or equal to 1');
+const isMoreThanTen = x =>
+    x > 10 ? Pass('Is greater than 10') : Fail('Is less than or equal to 10');
+
+const result = Inquiry.subject(5)
+    .inquire(isMoreThanOne)
+    .inquire(isMoreThanTen)
+    .swap();
+
+console.log(result);
+// > {subject: Just(5), pass: Pass(['Is less than or equal to 10']), fail: Fail(['Is greater than 1']), iou: IOU([]), informant: _ => _};
 ```
 
 ### Standard monadic methods:
@@ -326,8 +469,6 @@ _Documentation forthcoming for the following._
 
 `ap`
 `map`
-`chain`
-`join`
 
 ## Development
 
