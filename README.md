@@ -1,11 +1,51 @@
 # Inquiry
-### v0.16.16
+### v0.16.17
 
 [![Build Status](https://travis-ci.com/rgeraldporter/inquiry-monad.svg?branch=master)](https://travis-ci.com/rgeraldporter/inquiry-monad)
 
-Inquiry chains together functions that test a given value ("subject") and return with a full set of all passes, failures, and the original untouched value. It follows the practices of functional programming -- for those more deeply familiar with functional programming, it is a monad that can be compared with an `Either` or a `Validation`.
+Inquiry creates a process flow that allows one to chain multiple functions together to test a value ("subject"), granting observability over all results and returning a full report containing successes, failures, and the original test subject without mutation.
 
-The methods for inquiry look much like Promises, and you may even use Promises within Inquiry.
+Inquiry's API is comparible to Promises, and is designed to have an expressive, friendly API.
+
+It utilizes the concepts of functional programming, though experience with functional programming is not meant to be a requirement for easy of use. To those experienced with functional programming, Inquiry can be compared with an `Either` or a `Validation` library.
+
+## Get started
+
+```bash
+npm install inquiry-monad -S
+```
+
+Optionally, if you are using [`fluture`](https://www.npmjs.com/package/fluture) or a compatible Futures library:
+```
+npm install inquiry-monad-futures -S
+```
+
+## Inquiry process types
+
+There are three process types for Inquiry:
+
+* `Inquiry` (syncronous-only)
+* `InquiryP` (supports Promises)
+* `InquiryF` (supports Futures -- requires seperate package indicated above)
+
+## Inquiry result types
+
+There are three result types used in Inquiry:
+
+* `Pass`: a positive result
+* `Fail`: a negative result
+* `IOU`: a result to be determined later (relevant to `InquiryP` and `InquiryF` chains only)
+
+Each type is a monad, and come with built-in methods for handling and exposing their data without mutating the values. See `Monad methods` below for details on how to handle results within these types.
+
+## Inquiry subject type
+
+The subject uses `Maybe` to contain the value, which can result in one of two types of values:
+
+* `Just`: a non-null non-undefined value
+* `Nothing`: an undefined or null value
+
+These are also monads, see `Monad methods` below for details on how to handle these types.
 
 ## Basic examples
 
@@ -61,25 +101,25 @@ InquiryP.subject(subjectDataWithFailure)
 
 // >> Promise.resolve(result: {subject: {a:1, b:'string', c:true}, pass: Pass(['has a', 'pretend I looked something up in a db']), fail: Fail(['b is invalid', 'has c value']), iou: IOU()})
 ```
+## Use
 
-While `Inquiry` does not support asyncronous behaviour, Promises are supported via `InquiryP`. This means you will need to declare in advance by using `InquiryP` if you expect any _inquire_ functions to be returning Promises, however it will work fine if none do.
+_Note that unless otherwise stated in this document, `Inquiry`, `InquiryP`, and `InquiryF` is interchangeable, and mostly share the same API._
 
-For the more functionally-pure-minded, Futures are supported via `inquiry-monad-futures` package, which uses Fluture. (You will need to install that seperately to use it.)
+Inquiry can take any _subject_ and test it against various functions via the `.inquire` method. This results in a return value containing a list of result types for `Fail`, `Pass`, and `IOU`.
 
-## Description
+The advantage over a Promise chain is that the original subject and each result is retained through the chain of `.inquire` calls, giving complete observability over the data lifecycle.
 
-Inquiry can take any value (known as a _subject_) and test it against various functions via `inquire`s. This results in a return value containing two or three lists: `Pass([])`, `Fail([])` (and, `IOU([])` in the case of `InquiryP`).
+Additionally, this gives the ability to contain Promises within a monadic structure which bolsters immutibility, and allows better control over side-effects.
 
-The advantage over traditional Promise chains is that the original subject and each result is retained through the chain of `inquire` functions, giving complete observability over the data lifecycle.
+## Comparing to `Either` or `Validation`
 
-Additionally, this allows one to restrain Promises to stay with a monadic structure, bolstering immutibility, and discouraging side-effects.
+For those who might wish to compare to a conventional `Either` (`Left`/`Right`) or `Validation` (`Failure`/`Success`) in functional programming, here are some advantages brought by using Inquiry:
 
-For those who might wish to compare to a conventional `Either` (`Left`/`Right`) in functional programming, there are many advantages over an `Either` or `Validation` pattern from functional:
-
-*   Inquiry aggregates *all* results, not just failures.
-*   Inquiry can run functions against both sides (conventional `Left`/`Right` or `Failure`/`Success` as `Fail`/`Pass`)
-*   Inquiry retains the original subject rather than transforming it into the final result
+*   Inquiry aggregates **all** results, and does not eliminate positive results when a negative one is returned
+*   Inquiry can run functions against both lists `Pass` and `Fail`
+*   Inquiry always retains the original subject rather than transforming it
 *   Inquiry is designed to be an expressive, easily understood API, to be understood with little or no functional programming experience
+*   While Inquiry is opinionated and has many "`Fail`-first" methods, methods are provided that allow for a less opinionated usage
 
 # Constructors
 
@@ -87,19 +127,23 @@ For those who might wish to compare to a conventional `Either` (`Left`/`Right`) 
 
 Returns a new `Inquiry` monad, which contains an object with properties `subject`, `pass`, `fail`, `iou`, and a single method,  `informant`.
 
-`subject`: contains `value` passed to `Inquiry.subject` within a `Maybe` monad, meaning it will either be `Just(value)` or `Nothing()`.
-`pass`: contains a `Pass` monad containing an array of values
-`fail`: contains a `Fail` monad containing an array of values
-`iou`: contains an `IOU` monad contains an array of Promises (only relevant with `InquiryP`)
-`informant`: contains a function to be called upon the return of a `.inquire` call, for observation or logging purposes (set by calling `.informant` method)
+* `subject`: contains `value` that was passed to `Inquiry.subject`. This value is contained within a `Maybe` monad, meaning it will either be `Just(value)` or `Nothing()`.
+* `pass`: contains a `Pass` monad, containing an array of values
+* `fail`: contains a `Fail` monad, containing an array of values
+* `ious`: contains an `IOU` monad, containing an array of Promises or Futures (only relevant with `InquiryP` and `InquiryF`)
+* `informant`: contains a function to be called upon the return of a `.inquire` call, for observation/logging purposes (is set by calling `.informant` method)
 
 ## `InquiryP.subject(value)`
 
-Same as the above, however it returns a monad called `InquiryP` which enables Promise/async-based `inquire` usage.
+Same as the above, however it returns a monad called `InquiryP` which enables Promise async-based `inquire` usage.
+
+## `InquiryF.subject(value)`
+
+Also same, however it returns a monad called `InquiryF` which enables Future async-based `inquire` usage. Requires `inquiry-monad-futures` to be included.
 
 #### Note
 
-Using the above object structure, you may also assemble your own `Inquiry`/`InquiryP` monad "manually" with `Inquiry.of`/`InquiryP.of`, those this is generally unnecessary.
+Using the above object structure, you may also assemble your own `Inquiry` monad "manually" with `Inquiry.of` though this is usually only necessary if using more standard functional programming methods such as `.chain` and `.ap`.
 
 As a basic example:
 
@@ -114,7 +158,7 @@ console.log(
 // > {subject: Just({something: true}), pass: Pass([]), fail: Fail([]), iou: IOU([]), informant: console.log};
 ```
 
-# `Inquiry` and `InquiryP` Methods
+# `Inquiry` methods
 
 ## Core methods
 
@@ -179,9 +223,11 @@ The following methods are to be used as a means of "exiting" the chain.
 
 ### `.join()` (only useful for `Inquiry`)
 
-Returns the contained `Inquiry`/`InquiryP` object value, without any additional handling.
+Returns the contained `Inquiry` object value, without any additional handling.
 
 This is most basic way of returning the values collected by `Inquiry`.
+
+This is also a monad method.
 
 Warning: this can be, but should not be, used with `InquiryP`as it will not ensure Promises have resolved before returning the value, and will contain these Promises in the `IOU` list.
 
@@ -202,9 +248,11 @@ console.log(results)
 
 ### `.chain(f)`
 
-Passes the contained `Inquiry`/`InquiryP` object value into a function `f`. (You may optionally continue the Inquiry chain by having function `f` return `Inquiry.of(value)` as long as it adheres to the object structure.)
+Passes the contained `Inquiry`object value into a function `f`. (You may optionally continue the Inquiry chain by having function `f` return `Inquiry.of(value)` as long as it adheres to the object structure.)
 
-This is useful when you want to convert `Inquiry`/`InquiryP` into a Promise.
+This is useful when you want to convert `Inquiry` into a Promise.
+
+This is also a monad method.
 
 Warning: In the case of `InquiryP`, you will want to use `await` first before using chain (see below).
 ```js
@@ -224,7 +272,7 @@ Inquiry.subject(5)
 
 ### `.conclude(f, g)`
 
-Returns the contained `Inquiry`/`InquiryP` object value, with map functions applied to both fail (`f`) and pass (`g`).
+Returns the contained `Inquiry` object value, with map functions applied to both fail (`f`) and pass (`g`).
 
 For `InquiryP`, this method wwill await resolution of all outstanding IOUs (Promises) before applying `f` and `g`.
 
@@ -253,6 +301,18 @@ const results = Inquiry.subject(5)
 console.log(results);
 // > {subject: Just(5), pass: {passCount: 1, passes: ['Is greater than 1']}, fail: {failCount: 1, fails: ['Is less than or equal to 10']}, iou: IOU([]), informant: _ => _};
 ```
+
+### `.faulted(f)`
+
+Returns the contained `Inquiry` object value, after running function `f` against the `Fail` list -- but only if there are items in that list.
+
+Functionally equivalent to `.conclude(f, x => x)`.
+
+### `.cleared(f)`
+
+Returns the contained `Inquiry` object value, after running function `f` against the `Pass` list -- but only if there are no items in the `Fail` list.
+
+Functionally opposite of `.faulted(f)`.
 
 ### `.fork(f, g)`
 
@@ -352,7 +412,7 @@ InquiryP.subject(5)
 
 Run a function `f` only if `fail` has contents.
 
-**NOTE: Function `f` must return an `Inquiry`/`InquiryP`, via the constructor `of`**.
+**NOTE: Function `f` must return an `Inquiry`, via the constructor `of`**.
 
 The `InquiryP` version of this will wait for outstanding Promises to resolve.
 
@@ -386,7 +446,7 @@ Inquiry.subject(5)
 
 Run a function `f` only if `pass` has contents. Unlike `fork` or `cleared` this triggers if there are any results in the `Pass` list, regardless of how many results exist within the `Fail` list.
 
-**NOTE: Function `f` must return an `Inquiry`/`InquiryP`, via the constructor `of`**.
+**NOTE: Function `f` must return an `Inquiry`, via the constructor `of`**.
 
 The `InquiryP` version of this will wait for outstanding Promises to resolve.
 
@@ -463,12 +523,65 @@ console.log(result);
 // > {subject: Just(5), pass: Pass(['Is less than or equal to 10']), fail: Fail(['Is greater than 1']), iou: IOU([]), informant: _ => _};
 ```
 
-### Standard monadic methods:
+## Monad methods
 
-_Documentation forthcoming for the following._
+### `map(f)`
 
-`ap`
-`map`
+Taking a function `f`, apply the contained value and return the result in the same type of monad.
+
+```js
+const R = require('ramda');
+const passes = Pass([1, 2]);
+const fails = Fail([5, 10, 30]);
+const doublePasses = passes.map(R.multiply(2));
+const tripleFails = fails.map(R.multiply(3))
+
+console.log(doublePasses.inspect());
+// > Pass([2, 4])
+
+console.log(tripeFails.inspect());
+// > Fail([15, 30, 90])
+
+// since `Inquiry` is a monad containing a strictly structured Object type, simple maps will not work
+const isEven = n => n % 2 === 0;
+const filterPass = inq => {
+    inq.passes.map(R.filter(isEven)); // passes is inside a Pass monad, need to map it as well
+    return inq; // must return with all properties intact (passes, fails, ious, etc)
+}
+
+const result = Inquiry.subject('something')
+    .inquire(passOne)
+    .inquiry(passTwo)
+    .map(filterPass)
+    .join();
+
+console.log(result)
+// > { subject: Just('something), pass: Pass([2]), fail: Fail([]), iou: IOU([]), informant: _ => _}
+```
+
+### `.ap(f)`
+
+Applicative functor method. This is arguably one of the more complex functional programming concepts.
+
+With this you can take a monad that contains a function (instead of a straight up value) and combine it with a monad containing a value.
+
+In this example, we use [Ramda](https://ramdajs.com) and [Maybe](https://www.npmjs.com/package/simple-maybe) to handle a `Pass` list.
+
+```js
+// using Ramda for this example for the R.sum function, which adds all array values together
+const R = require('ramda');
+const Maybe = require('simple-maybe');
+const passes = Pass([1, 2]);
+const addAllPasses = Maybe.of(R.sum).ap(passes);
+```
+
+### `.join(f)`
+
+See above in Unwrap methods section.
+
+### `.chain(f)`
+
+See above in Unwrap methods section.
 
 ## Development
 

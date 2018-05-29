@@ -206,6 +206,7 @@ const InquiryPOf = (x: Inquiry) => InquiryP(x);
 const buildInq = <T>(x: T) => (vals: Array<any>) =>
     vals.reduce((acc, cur) => cur.answer(x, 'reduced', InquiryP), x);
 
+// @todo add time limit option to Promises?
 const InquiryP = (x: Inquiry): InquiryMonad => ({
     // Inquire: core method
     inquire: (f: Function) => {
@@ -253,7 +254,7 @@ const InquiryP = (x: Inquiry): InquiryMonad => ({
     unison: (
         f: Function
     ): InquiryMonad => // apply a single map to both fail & pass (e.g. sort), iou untouched
-        InquiryP({ // @todo: determine if there should be an await here??
+        InquiryP({
             subject: x.subject,
             iou: x.iou,
             fail: Fail(f(x.fail.join())),

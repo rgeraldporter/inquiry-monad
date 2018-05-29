@@ -50,7 +50,6 @@ interface Inquiry {
     pass: PassMonad;
     informant: Function;
     iou: IOUMonad;
-    of?: Function;
 }
 
 interface InquiryMonad extends Monad {

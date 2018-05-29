@@ -1,6 +1,6 @@
 {
   "name": "inquiry-monad",
-  "version": "0.16.16",
+  "version": "0.16.17",
   "description": "A module for chaining testing functions and returning an aggregate of both passes and failures and the original value. Functional, much like an Either.",
   "main": "built/index.js",
   "scripts": {
