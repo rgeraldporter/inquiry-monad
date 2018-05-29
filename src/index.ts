@@ -203,7 +203,7 @@ const InquiryPSubject =<T> (x: T | InquiryMonad) =>
 
 const InquiryPOf = (x: Inquiry) => InquiryP(x);
 
-const buildInq = <T>(x: T) => (vals: Array<any>) =>
+const buildInq = <T>(x: T) => (vals: Array<any>) => // @todo verify informant produces the async function name
     vals.reduce((acc, cur) => cur.answer(x, 'reduced', InquiryP), x);
 
 // @todo add time limit option to Promises?
