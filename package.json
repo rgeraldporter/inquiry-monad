@@ -1,6 +1,6 @@
 {
   "name": "inquiry-monad",
-  "version": "0.16.19",
+  "version": "0.16.20",
   "description": "A module for chaining testing functions and returning an aggregate of both passes and failures and the original value. Functional, much like an Either.",
   "main": "built/index.js",
   "scripts": {
@@ -25,18 +25,18 @@
   "author": "Robert Gerald Porter <rob@weeverapps.com>",
   "license": "MIT",
   "devDependencies": {
-    "@types/jest": "22.2.3",
-    "@types/ramda": "0.25.24",
     "awesome-typescript-loader": "5.0.0",
     "jest": "22.4.4",
     "ramda": "0.25.0",
-    "ts-jest": "22.4.6",
     "ts-node": "6.0.0",
     "webpack": "4.8.3",
     "webpack-cli": "2.1.4"
   },
   "dependencies": {
+    "@types/jest": "22.2.3",
+    "@types/ramda": "0.25.24",
     "simple-maybe": "0.3.5",
+    "ts-jest": "22.4.6",
     "typescript": "2.8.3"
   }
 }
