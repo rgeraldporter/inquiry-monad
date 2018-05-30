@@ -1,5 +1,5 @@
 # Inquiry
-### v0.16.21
+### v0.17.0
 
 [![Build Status](https://travis-ci.com/rgeraldporter/inquiry-monad.svg?branch=master)](https://travis-ci.com/rgeraldporter/inquiry-monad)
 
@@ -251,7 +251,7 @@ Passes the contained `Inquiry` object value into a function `f`. (You may option
 
 This is useful when you want to convert an Inquiry process chain into a Promise or a Future.
 
-Warning: In the case of `InquiryP`, you will want to use `await` first before using chain (see below).
+Warning: In the case of `InquiryP`, you will want to use `await` first before using chain (see below), though that requires you to convert into a Promise (or Future).
 ```js
 const isMoreThanOne = x =>
     x > 1 ? Pass('Is greater than 1') : Fail('Is less than or equal to 1');
@@ -271,7 +271,7 @@ Inquiry.subject(5)
 
 Returns the contained `Inquiry` object value, with map functions `f` and `g` applied to both fail (`f`) and pass (`g`).
 
-For `InquiryP`, this method will await resolution of all outstanding IOUs (Promises) before applying `f` and `g`.
+For `InquiryP`, this method will wait for resolution of all outstanding IOUs (Promises) before applying `f` and `g`.
 
 This is useful for returning a full accounting of all results and the original subject, in addition to making adjustments based on resulting `Fail` and `Pass` lists.
 
@@ -372,7 +372,7 @@ const isMoreThanTen = x =>
 
 const logResults = someFn; // notify another system about the passes/failures
 
-const results =Inquiry.subject(5)
+const results = Inquiry.subject(5)
     .informant(logResults)
     .inquire(isMoreThanOne)
     .inquire(isMoreThanTen)
@@ -382,11 +382,11 @@ console.log(results);
 // >> [{greaterThanOne: true}, {greaterThanTen: false}]
 ```
 
-## Early results methods:
+### `.await(t)` (`InquiryP` and `InquiryF` only)
 
-### `.await()` (`InquiryP` and `InquiryF` only)
+`t` is optional.
 
-Pause and wait for all items in the `IOU` list to resolve before continuing.
+After resolving all outstanding IOUs or waiting for time `t`, returns a Promise or Future containing the Inquiry with either all IOUs resolved or a timeout under the `Fail` list.
 
 ```js
 const isMoreThanOne = x =>
@@ -399,11 +399,13 @@ InquiryP.subject(5)
     .inquire(isMoreThanOne)
     .inquire(checkDb)
     .inquire(isMoreThanTen)
-    .await()
-    .chain(console.log);
+    .await(20000)
+    .then(inq => console.log(inq.join())); // if checkDb() took more than 20 seconds, its result would be a Fail
 
 // > {subject: Just(5), pass: Pass(['Is greater than 1', 'here is some data']), fail: Fail(['Is less than or equal to 10']), iou: IOU([]), informant: _ => _};
 ```
+
+## Early results methods:
 
 ### `.breakpoint(f)`
 
@@ -479,7 +481,7 @@ Inquiry.subject(5)
 
 Run a function `f` against both `Pass` and `Fail` lists.
 
-Note that in the case of `InquiryP` and `InquiryF` you may have items in the `IOU` list that are not yet `Fail` or `Pass`, which will be skipped. (To avoid skipping past unresolved `IOU` results, use `await` first.)
+Note that in the case of `InquiryP` and `InquiryF` items in the IOU list will be missed, unless resolved via `.await` easlier. This does currently bury the Inquiry in a Promise layer, however.
 
 ```js
 const isMoreThanOne = x =>

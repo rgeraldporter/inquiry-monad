@@ -321,6 +321,32 @@ describe('The module', () => {
             });
     });
 
+    it('should be able to make many checks, including async ones, run await, then and run a faulted unwrap', () => {
+        return (InquiryP as any)
+            .subject({ name: 'test', age: 10, description: 'blah' })
+            .inquire(oldEnough)
+            .inquire(findHeight)
+            .inquire(resolveAfter1Second)
+            .inquire(nameSpelledRight)
+            .inquire(hasRecords)
+            .inquire(mathGrade)
+            .await(2000)
+            /*.faulted((x: FailMonad) => {
+                expect(x.inspect()).toBe(
+                    "Fail(not old enough,Name wasn't spelled correctly,Failed at math)"
+                );
+                return x;
+            });*/
+            .then((inq: InquiryMonad) =>
+                inq.faulted((x: FailMonad) => {
+                    expect(x.inspect()).toBe(
+                        "Fail(not old enough,Name wasn't spelled correctly,Failed at math)"
+                    );
+                    return x;
+                })
+            );
+    });
+
     it('should be able to make many checks, including async ones, and run a cleared unwrap when all passes', () => {
         return (InquiryP as any)
             .subject({ name: 'test', age: 14, description: 'blah' })

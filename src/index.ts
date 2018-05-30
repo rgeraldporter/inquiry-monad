@@ -86,7 +86,20 @@ const InquirySubject = <T>(x: T | InquiryMonad) =>
               informant: <T>(_: T) => _
           });
 
-const InquiryOf = (x: Inquiry) => Inquiry(x);
+const warnTypeError = <T>(x: T) => {
+    console.warn('Inquiry.of requires properties: subject, fail, pass, iou, informant. Converting to Inquiry.subject().');
+    return InquirySubject(x);
+}
+
+const InquiryOf = (x: Inquiry) =>
+    'subject' in x
+          && 'fail' in x
+          && 'pass' in x
+          && 'iou' in x
+          && 'informant' in x
+            ? Inquiry(x)
+            : warnTypeError(x);
+
 
 const Inquiry = (x: Inquiry): InquiryMonad => ({
     // Inquire: core method
@@ -201,12 +214,23 @@ const InquiryPSubject =<T> (x: T | InquiryMonad) =>
               informant: <T>(_: T) => _
           });
 
-const InquiryPOf = (x: Inquiry) => InquiryP(x);
+const warnTypeErrorP = <T>(x: T) => {
+    console.warn('InquiryP.of requires properties: subject, fail, pass, iou, informant. Converting to InquiryP.subject().');
+    return InquiryPSubject(x);
+}
 
-const buildInq = <T>(x: T) => (vals: Array<any>) => // @todo verify informant produces the async function name
-    vals.reduce((acc, cur) => cur.answer(x, 'reduced', InquiryP), x);
+const InquiryPOf = (x: Inquiry) =>
+    'subject' in x
+        && 'fail' in x
+        && 'pass' in x
+        && 'iou' in x
+        && 'informant' in x
+            ? InquiryP(x)
+            : warnTypeErrorP(x);
 
-// @todo add time limit option to Promises?
+const buildInq = <T>(x: T) => (vals: Array<any>) => // @todo find a way to produce fn name
+    vals.reduce((acc, cur) => cur.answer(x, '(async fn)', InquiryP), x);
+
 const InquiryP = (x: Inquiry): InquiryMonad => ({
     // Inquire: core method
     inquire: (f: Function) => {
@@ -288,6 +312,7 @@ const InquiryP = (x: Inquiry): InquiryMonad => ({
 
     // Unwrapping methods: all return Promises, all complete outstanding IOUs
 
+    // @todo handle Promise.reject? Is it a failure or what?
     // Unwraps the Inquiry after ensuring all IOUs are completed
     conclude: async (f: Function, g: Function): Promise<Inquiry> =>
         Promise.all(x.iou.join())
@@ -330,13 +355,19 @@ const InquiryP = (x: Inquiry): InquiryMonad => ({
             .then(i => (i.isInquiry ? i.join() : i))
             .then(y => f(y.fail.join().concat(y.pass.join()))),
 
-    // await all IOUs to resolve, then return a new Inquiry
-    await: async (): Promise<InquiryMonad> =>
-        Promise.all(x.iou.join())
-            .then(buildInq(x))
-            .then(i => (i.isInquiry ? i.join() : i))
-            .then(y => InquiryPOf(y)),
+    // await all IOUs to resolve, then return a new Inquiry CONVERTS TO PROMISE!
+    await: async (t: number = Infinity): Promise<InquiryMonad> => {
 
+        // try: generator function. Each IOU = array in for loop as per https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/yield
+        const timeLimit = new Promise((resolve, reject) => setTimeout(resolve, t, [Fail('Promise(s) have timed out')]))
+        const awaitPromises = Promise.all(x.iou.join());
+
+        return Promise.race([timeLimit, awaitPromises])
+            // @ts-ignore
+            .then(buildInq(x))
+            .then((i: any) => (i.isInquiry ? i.join() : i))
+            .then((y: any) =>  InquiryPOf(y));
+    },
     isInquiry: true
 });
 
