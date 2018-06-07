@@ -331,12 +331,6 @@ describe('The module', () => {
             .inquire(hasRecords)
             .inquire(mathGrade)
             .await(2000)
-            /*.faulted((x: FailMonad) => {
-                expect(x.inspect()).toBe(
-                    "Fail(not old enough,Name wasn't spelled correctly,Failed at math)"
-                );
-                return x;
-            });*/
             .then((inq: InquiryMonad) =>
                 inq.faulted((x: FailMonad) => {
                     expect(x.inspect()).toBe(

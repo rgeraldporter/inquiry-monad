@@ -1,49 +1,11 @@
 # Inquiry
-### v0.17.0
+### v0.18.0
 
 [![Build Status](https://travis-ci.com/rgeraldporter/inquiry-monad.svg?branch=master)](https://travis-ci.com/rgeraldporter/inquiry-monad)
 
 Inquiry creates a process flow that allows one to chain multiple functions together to test a value ("subject"), granting observability over all results and returning a full report containing successes, failures, and the original test subject without mutation.
 
 Inquiry's API is comparible to Promises, and is designed to have an expressive, friendly API. It utilizes the concepts of functional programming, though experience with functional programming is not meant to be a requirement for ease of use. To those experienced with functional programming, Inquiry can be compared with an `Either` or a `Validation` library.
-
-## Get started
-
-```bash
-npm install inquiry-monad -S
-```
-
-Optionally, if you are using [`fluture`](https://www.npmjs.com/package/fluture) or a compatible Futures library:
-```bash
-npm install inquiry-monad-futures -S
-```
-
-## Inquiry process types
-
-There are three process types for Inquiry:
-
-* `Inquiry` (syncronous-only)
-* `InquiryP` (supports Promises)
-* `InquiryF` (supports Futures -- requires `inquiry-monad-futures` to be included)
-
-## Inquiry result types
-
-There are three result types used in Inquiry:
-
-* `Pass`: a positive result
-* `Fail`: a negative result
-* `IOU`: a result to be determined later (relevant to `InquiryP` and `InquiryF` chains only)
-
-Each of these types is a monad, and come with built-in methods for handling and exposing their data without mutating the values. See `Monad methods` below for details on how to handle results within these types.
-
-## Inquiry subject type
-
-The subject uses `Maybe` to contain the value, which can result in one of two types of values:
-
-* `Just`: a non-null, non-undefined value
-* `Nothing`: an undefined or null value
-
-These are also monads, see `Monad methods` below for details on how to handle these types.
 
 ## Basic examples
 
@@ -100,6 +62,45 @@ InquiryP.subject(subjectDataWithFailure)
 
 // >> Promise.resolve(result: {subject: {a:1, b:'string', c:true}, pass: Pass(['has a', 'pretend I looked something up in a db']), fail: Fail(['b is invalid', 'has c value']), iou: IOU()})
 ```
+
+## Get started
+
+```bash
+npm install inquiry-monad -S
+```
+
+Optionally, if you are using [`fluture`](https://www.npmjs.com/package/fluture) or a compatible Futures library:
+```bash
+npm install inquiry-monad-futures -S
+```
+
+## Inquiry process types
+
+There are three process types for Inquiry:
+
+* `Inquiry` (syncronous-only)
+* `InquiryP` (supports Promises)
+* `InquiryF` (supports Futures -- requires `inquiry-monad-futures` to be included)
+
+## Inquiry result types
+
+There are three result types used in Inquiry:
+
+* `Pass`: a positive result
+* `Fail`: a negative result
+* `IOU`: a result to be determined later (relevant to `InquiryP` and `InquiryF` chains only)
+
+Each of these types is a monad, and come with built-in methods for handling and exposing their data without mutating the values. See `Monad methods` below for details on how to handle results within these types.
+
+## Inquiry subject type
+
+The subject uses `Maybe` to contain the value, which can result in one of two types of values:
+
+* `Just`: a non-null, non-undefined value
+* `Nothing`: an undefined or null value
+
+These are also monads, see `Monad methods` below for details on how to handle these types.
+
 ## Use
 
 _Note that unless otherwise stated in this document, `Inquiry`, `InquiryP`, and `InquiryF` are interchangeable, and mostly share the same API._
@@ -140,10 +141,6 @@ Same as the above, however it returns a monad called `InquiryP` which enables fu
 
 Also same, however it returns a monad called `InquiryF` which enables function `f` in `.inquire(f)` to return a Future. Requires `inquiry-monad-futures` to be included.
 
-#### Note
-
-Using the Inquiry object structure, you may also assemble your own `Inquiry` monad "manually" with `Inquiry.of` though this is usually only necessary if using more standard functional programming methods such as `.chain` and `.ap`.
-
 As a basic example:
 
 ```js
@@ -156,6 +153,12 @@ console.log(
 
 // > {subject: Just({something: true}), pass: Pass([]), fail: Fail([]), iou: IOU([]), informant: console.log};
 ```
+
+## `Inquiry.of(inquiry)`
+
+Using the Inquiry object structure, you may also assemble your own `Inquiry` monad "manually" with `Inquiry.of` though this is usually only necessary if using more standard functional programming methods such as `.chain` and `.ap`.
+
+If you do not match the object strucutre, this constructor will fall back on converting the parameter into the `subject`.
 
 # `Inquiry` methods
 
@@ -222,6 +225,10 @@ console.log(result);
 
 The following methods are to be used as a means of "exiting" the Inquiry process chain.
 
+`InquiryP` unwrap methods exit into a Promise.
+
+`InquiryF` unwrap methods do not exit into a Future, but you can convert to a promise by unwrapping with `.promise()`.
+
 ### `.join()` (only useful for `Inquiry`)
 
 Returns the contained `Inquiry` object value, without any additional handling.
@@ -237,9 +244,9 @@ const isMoreThanTen = x =>
     x > 10 ? Pass('Is greater than 10') : Fail('Is less than or equal to 10');
 
 const results = Inquiry.subject(5)
-    .informant(console.log)
     .inquire(isMoreThanOne)
-    .inquire(isMoreThanTen);
+    .inquire(isMoreThanTen)
+    .join();
 
 console.log(results)
 // > {subject: Just(5), pass: Pass(['Is greater than 1']), fail: Fail(['Is less than or equal to 10']), iou: IOU([]), informant: _ => _};
@@ -273,6 +280,8 @@ Returns the contained `Inquiry` object value, with map functions `f` and `g` app
 
 For `InquiryP`, this method will wait for resolution of all outstanding IOUs (Promises) before applying `f` and `g`.
 
+i.e. "Run one function for the list of failures, another for the list of passes, and return back everything."
+
 This is useful for returning a full accounting of all results and the original subject, in addition to making adjustments based on resulting `Fail` and `Pass` lists.
 
 ```js
@@ -303,17 +312,39 @@ console.log(results);
 
 Returns the contained `Inquiry` object value, after running function `f` against the `Fail` list -- but only if there are items in that list.
 
+i.e., "Run the function when something fails."
+
 Functionally equivalent to `.conclude(f, x => x)`.
 
 ### `.cleared(f)`
 
 Returns the contained `Inquiry` object value, after running function `f` against the `Pass` list -- but only if there are no items in the `Fail` list.
 
-Functionally opposite of `.faulted(f)`.
+i.e., "Run the function when everything passes."
+
+Functionally opposite of `.faulted(f)`. These two can be in the same chain.
+
+### `.suffice(f)`
+
+Returns the contained `Inquiry` object value, after running function `f` against the `Pass` list -- but only if there are items in the `Pass` list. (This is a `Pass`-preferring version of `faulted`.)
+
+i.e., "Run the function when something passes."
+
+Functionally equivalent to `.conclude(x => x, f)`.
+
+### `.scratch(f)`
+
+Returns the contained `Inquiry` object value, after running function `f` against the `Pass` list -- but only if there are no items in the `Pass` list.
+
+i.e., "Run the function when everything fails"
+
+Functionally opposite of `.suffice(f)`. These two can be in the same chain.
 
 ### `.fork(f, g)`
 
 Either run a function `f` if there are _any_ values in the `Fail` list, or `g` if there are _no_ values in the `Fail` list, returning only the result of the function executed.
+
+i.e. "Run one function if something failed, another if nothing failed."
 
 This is useful for conventional error-handling, where you wish to favour handling of `Fail` results regardless of any `Pass` results.
 
@@ -362,6 +393,8 @@ console.log(results2);
 
 Run function `f` against an `Array` resulting from a merge of `Pass` and `Fail` lists.
 
+i.e., "Run the function against a merge of fails and passes."
+
 This may be useful if you'd like to use the `Inquiry` API but do not necessarily care about `Pass` or `Fail` lists, or you may have already handled their positive/negative aspects via other means.
 
 ```js
@@ -388,6 +421,8 @@ console.log(results);
 
 After resolving all outstanding IOUs or waiting for time `t`, returns a Promise or Future containing the Inquiry with either all IOUs resolved or a timeout under the `Fail` list.
 
+i.e., "Wait for everything to finish, then continue."
+
 ```js
 const isMoreThanOne = x =>
     x > 1 ? Pass('Is greater than 1') : Fail('Is less than or equal to 1');
@@ -410,6 +445,8 @@ InquiryP.subject(5)
 ### `.breakpoint(f)`
 
 Run a function `f` only if the `Fail` list has contents.
+
+i.e., "Run the function if there are any fails."
 
 **NOTE: Function `f` must return an `Inquiry`, via the constructor `of`**.
 
@@ -444,6 +481,8 @@ Inquiry.subject(5)
 ### `.milestone(f)`
 
 Run a function `f` only if `Pass` list has contents. Unlike `fork` or `cleared` this triggers if there are any results in the `Pass` list, regardless of how many results exist within the `Fail` list.
+
+i.e., "Run the function if there are any passes."
 
 **NOTE: Function `f` must return an `Inquiry`, via the constructor `of`**.
 

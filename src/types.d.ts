@@ -59,6 +59,8 @@ interface InquiryMonad extends Monad {
     fork: Function;
     faulted: Function;
     cleared: Function;
+    suffice: Function;
+    scratch: Function;
     informant: Function;
     unison: Function;
     breakpoint: Function;

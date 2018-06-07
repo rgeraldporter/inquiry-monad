@@ -182,13 +182,19 @@ const Inquiry = (x: Inquiry): InquiryMonad => ({
         informant: x.informant
     }),
 
-    // If no fails, handoff aggregated passes to supplied function; if fails, return existing Inquiry
+    // If there are no fails, handoff aggregated passes to supplied function; if any fails, return existing Inquiry
     cleared: (f: Function) => (x.fail.isEmpty() ? f(x.pass) : Inquiry(x)),
 
-    // If fails, handoff aggregated fails to supplied function; if no fails, return existing Inquiry
+    // If there are fails, handoff aggregated fails to supplied function; if no fails, return existing Inquiry
     faulted: (f: Function) => (x.fail.isEmpty() ? Inquiry(x) : f(x.fail)),
 
-    // unwrap left if fails, right if not
+    // If there are passes, handoff aggregated passes to supplied function; if no passes, return existing Inquiry
+    suffice: (f: Function) => (x.pass.isEmpty() ? Inquiry(x) : f(x.pass)),
+
+    // If there are no passes, handoff aggregated passes to supplied function; if any passes, return existing Inquiry
+    scratch: (f: Function) => (x.pass.isEmpty() ? f(x.pass) : Inquiry(x)),
+
+    // unwrap left if any fails, right if not
     fork: (f: Function, g: Function) =>
         x.fail.join().length ? f(x.fail) : g(x.pass),
 
@@ -340,6 +346,21 @@ const InquiryP = (x: Inquiry): InquiryMonad => ({
             .then(buildInq(x))
             .then(i => (i.isInquiry ? i.join() : i))
             .then(y => (y.fail.isEmpty() ? InquiryP(y) : f(y.fail))),
+
+    // If any passes, handoff aggregated passes to supplied function; if no passes, return existing InquiryP
+    suffice: async (f: Function): Promise<InquiryMonad | Array<any>> =>
+        Promise.all(x.iou.join())
+            .then(buildInq(x))
+            .then(i => (i.isInquiry ? i.join() : i))
+            .then(y => (y.pass.isEmpty() ? InquiryP(y) : f(y.pass)))
+            .catch(err => console.error('err', err)),
+
+    // If no passes, handoff aggregated fails to supplied function; if any passes, return existing InquiryP
+    scratch: async (f: Function): Promise<InquiryMonad | Array<any>> =>
+        Promise.all(x.iou.join())
+            .then(buildInq(x))
+            .then(i => (i.isInquiry ? i.join() : i))
+            .then(y => (y.pass.isEmpty() ? f(y.pass) : InquiryP(y))),
 
     // Take left function and hands off fails if any, otherwise takes right function and hands off passes to that function
     fork: async (f: Function, g: Function): Promise<Array<any>> =>
