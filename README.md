@@ -1,11 +1,13 @@
 # Inquiry
-### v0.18.1
+### v0.19.0
 
 [![Build Status](https://travis-ci.com/rgeraldporter/inquiry-monad.svg?branch=master)](https://travis-ci.com/rgeraldporter/inquiry-monad)
 
 Inquiry creates a process flow that allows one to chain multiple functions together to test a value ("subject"), granting observability over all results and returning a full report containing successes, failures, and the original test subject without mutation.
 
-Inquiry's API is comparible to Promises, and is designed to have an expressive, friendly API. It utilizes the concepts of functional programming, though experience with functional programming is not meant to be a requirement for ease of use. To those experienced with functional programming, Inquiry can be compared with an `Either` or a `Validation` library.
+Inquiry's API is comparible to Promises, and is designed to have an expressive, friendly API. It utilizes the concepts of functional programming, though experience with functional programming is not meant to be a requirement for ease of use.
+
+To those experienced with functional programming, Inquiry can be compared with an `Either` or a `Validation`.
 
 ## Basic examples
 
@@ -180,6 +182,39 @@ const result = Inquiry.subject(5)
 
 console.log(result);
 // > {subject: Just(5), pass: Pass(['Is greater than 1']), fail: Fail([]), iou: IOU([]), informant: _ => _};
+```
+
+### `.inquireMap(f, i)`
+
+Map version of `.inquire`. Pass function `f` that can curried `i` and `subject`, and collect `Pass`, `Fail`, `IOU` from the results.
+
+This can be useful to prevent sprawling `.inquire` chains.
+
+Function `f` _must_ be curried. See example:
+
+```js
+const planets = [
+    'Mercury',
+    'Venus',
+    'Earth',
+    'Mars',
+    'Jupiter',
+    'Saturn',
+    'Uranus',
+    'Neptune'
+];
+
+// curried, takes two parameters
+const startsWith = (word: string) => (checks: any) =>
+    word.startsWith(checks.letter) ? Pass(word) : Fail(word);
+
+Inquiry.subject({ letter: 'M' })
+    .inquireMap(startsWith, planets)
+    .suffice((pass: PassFailMonad) => {
+        console.log(pass.join());
+    });
+
+// > ["Mercury", "Mars"]
 ```
 
 ### `.informant(f)`

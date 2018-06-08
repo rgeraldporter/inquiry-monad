@@ -54,6 +54,7 @@ interface Inquiry {
 
 interface InquiryMonad extends Monad {
     inquire: Function;
+    inquireMap: Function;
     zip: Function;
     swap: Function;
     fork: Function;

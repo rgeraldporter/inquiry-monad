@@ -87,19 +87,20 @@ const InquirySubject = <T>(x: T | InquiryMonad) =>
           });
 
 const warnTypeError = <T>(x: T) => {
-    console.warn('Inquiry.of requires properties: subject, fail, pass, iou, informant. Converting to Inquiry.subject().');
+    console.warn(
+        'Inquiry.of requires properties: subject, fail, pass, iou, informant. Converting to Inquiry.subject().'
+    );
     return InquirySubject(x);
-}
+};
 
 const InquiryOf = (x: Inquiry) =>
-    'subject' in x
-          && 'fail' in x
-          && 'pass' in x
-          && 'iou' in x
-          && 'informant' in x
-            ? Inquiry(x)
-            : warnTypeError(x);
-
+    'subject' in x &&
+    'fail' in x &&
+    'pass' in x &&
+    'iou' in x &&
+    'informant' in x
+        ? Inquiry(x)
+        : warnTypeError(x);
 
 const Inquiry = (x: Inquiry): InquiryMonad => ({
     // Inquire: core method
@@ -109,8 +110,31 @@ const Inquiry = (x: Inquiry): InquiryMonad => ({
             inquireResponse.isPass ||
             inquireResponse.isInquiry
             ? inquireResponse.answer(x, f.name, Inquiry)
-            : Pass(inquireResponse);
+            : Pass(inquireResponse); // @todo test if this works? Shouldn't it need to do a .answer?
     },
+
+    inquireMap: (f: Function, i: Array<any>): InquiryMonad =>
+        i.reduce(
+            (inq, ii) => {
+                const inquireResponse = f(ii)(inq.join().subject.join());
+
+                // each return aggregates new contained value through exit
+                return inquireResponse.isFail ||
+                    inquireResponse.isPass ||
+                    inquireResponse.isInquiry
+                    ? inquireResponse.answer(inq.join(), f.name, Inquiry)
+                    : Pass(inquireResponse); // @todo test if this works? Shouldn't it need to do a .answer?
+            },
+
+            // initial Inquiry will be what is in `x` now
+            Inquiry({
+                subject: x.subject,
+                iou: x.iou,
+                fail: x.fail,
+                pass: x.pass,
+                informant: x.informant
+            })
+        ),
 
     // Informant: for spying/logging/observable
     informant: (f: Function) =>
@@ -209,7 +233,7 @@ const exportInquiry = {
     of: InquiryOf
 };
 
-const InquiryPSubject =<T> (x: T | InquiryMonad) =>
+const InquiryPSubject = <T>(x: T | InquiryMonad) =>
     (x as any).isInquiry
         ? x
         : InquiryP({
@@ -221,21 +245,24 @@ const InquiryPSubject =<T> (x: T | InquiryMonad) =>
           });
 
 const warnTypeErrorP = <T>(x: T) => {
-    console.warn('InquiryP.of requires properties: subject, fail, pass, iou, informant. Converting to InquiryP.subject().');
+    console.warn(
+        'InquiryP.of requires properties: subject, fail, pass, iou, informant. Converting to InquiryP.subject().'
+    );
     return InquiryPSubject(x);
-}
+};
 
 const InquiryPOf = (x: Inquiry) =>
-    'subject' in x
-        && 'fail' in x
-        && 'pass' in x
-        && 'iou' in x
-        && 'informant' in x
-            ? InquiryP(x)
-            : warnTypeErrorP(x);
+    'subject' in x &&
+    'fail' in x &&
+    'pass' in x &&
+    'iou' in x &&
+    'informant' in x
+        ? InquiryP(x)
+        : warnTypeErrorP(x);
 
-const buildInq = <T>(x: T) => (vals: Array<any>) => // @todo find a way to produce fn name
-    vals.reduce((acc, cur) => cur.answer(x, '(async fn)', InquiryP), x);
+const buildInq = <T>(x: T) => (
+    vals: Array<any> // @todo find a way to produce fn name
+) => vals.reduce((acc, cur) => cur.answer(x, '(async fn)', InquiryP), x);
 
 const InquiryP = (x: Inquiry): InquiryMonad => ({
     // Inquire: core method
@@ -256,6 +283,37 @@ const InquiryP = (x: Inquiry): InquiryMonad => ({
               })
             : syncronousResult(inquireResponse);
     },
+
+    inquireMap: (f: Function, i: Array<any>): InquiryMonad =>
+        i.reduce(
+            (inq, ii) => {
+                const inquireResponse = f(ii)(inq.join().subject.join());
+
+                const syncronousResult = (response: any) =>
+                    response.isFail || response.isPass || response.isInquiry
+                        ? response.answer(inq.join(), f.name, InquiryP)
+                        : Pass(response);
+
+                return inquireResponse.then
+                    ? InquiryP({
+                          subject: inq.join().subject,
+                          fail: inq.join().fail,
+                          pass: inq.join().pass,
+                          iou: inq.join().iou.concat(IOU([inquireResponse])),
+                          informant: inq.join().informant
+                      })
+                    : syncronousResult(inquireResponse);
+            },
+
+            // initial Inquiry will be what is in `x` now
+            InquiryP({
+                subject: x.subject,
+                iou: x.iou,
+                fail: x.fail,
+                pass: x.pass,
+                informant: x.informant
+            })
+        ),
 
     // Informant: for spying/logging/observable
     informant: (f: Function) =>
@@ -378,16 +436,19 @@ const InquiryP = (x: Inquiry): InquiryMonad => ({
 
     // await all IOUs to resolve, then return a new Inquiry CONVERTS TO PROMISE!
     await: async (t: number = Infinity): Promise<InquiryMonad> => {
-
         // try: generator function. Each IOU = array in for loop as per https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/yield
-        const timeLimit = new Promise((resolve, reject) => setTimeout(resolve, t, [Fail('Promise(s) have timed out')]))
+        const timeLimit = new Promise((resolve, reject) =>
+            setTimeout(resolve, t, [Fail('Promise(s) have timed out')])
+        );
         const awaitPromises = Promise.all(x.iou.join());
 
-        return Promise.race([timeLimit, awaitPromises])
-            // @ts-ignore
-            .then(buildInq(x))
-            .then((i: any) => (i.isInquiry ? i.join() : i))
-            .then((y: any) =>  InquiryPOf(y));
+        return (
+            Promise.race([timeLimit, awaitPromises])
+                // @ts-ignore
+                .then(buildInq(x))
+                .then((i: any) => (i.isInquiry ? i.join() : i))
+                .then((y: any) => InquiryPOf(y))
+        );
     },
     isInquiry: true
 });

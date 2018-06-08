@@ -29,6 +29,14 @@ function resolveAfter1Second(x: any) {
     });
 }
 
+function resolveAfter10ms(x: any) {
+    return new Promise(resolve => {
+        setTimeout(() => {
+            resolve(Pass('passed'));
+        }, 10);
+    });
+}
+
 describe('The module', () => {
     it('should satisfy the first monad law of left identity', () => {
         // this is trickier to do with a typed monad, but not impossible
@@ -353,6 +361,53 @@ describe('The module', () => {
                     "Fail(not old enough,Name wasn't spelled correctly,Failed at math)"
                 );
                 return x;
+            });
+    });
+
+    it('should be able to map a function as an inquireMap', () => {
+        const planets = [
+            'Mercury',
+            'Venus',
+            'Earth',
+            'Mars',
+            'Jupiter',
+            'Saturn',
+            'Uranus',
+            'Neptune'
+        ];
+
+        const startsWith = (word: string) => (checks: any) =>
+            word.startsWith(checks.letter) ? Pass(word) : Fail(word);
+
+        (Inquiry as any)
+            .subject({ letter: 'M' })
+            .inquireMap(startsWith, planets)
+            .suffice((pass: PassFailMonad) => {
+                expect(pass.join()).toEqual(['Mercury', 'Mars']);
+            });
+    });
+
+    it('should be able to map a function as an inquireMap with InquiryP', () => {
+        const planets = [
+            'Mercury',
+            'Venus',
+            'Earth',
+            'Mars',
+            'Jupiter',
+            'Saturn',
+            'Uranus',
+            'Neptune'
+        ];
+
+        const startsWith = (word: string) => (checks: any) =>
+            word.startsWith(checks.letter) ? Pass(word) : Fail(word);
+
+        return (InquiryP as any)
+            .subject({ letter: 'M' })
+            .inquire(resolveAfter10ms)
+            .inquireMap(startsWith, planets)
+            .suffice((pass: PassFailMonad) => {
+                expect(pass.join()).toEqual(['Mercury', 'Mars', 'passed']);
             });
     });
 });
