@@ -1,5 +1,5 @@
 # Inquiry
-### v0.18.0
+### v0.18.1
 
 [![Build Status](https://travis-ci.com/rgeraldporter/inquiry-monad.svg?branch=master)](https://travis-ci.com/rgeraldporter/inquiry-monad)
 
@@ -310,7 +310,7 @@ console.log(results);
 
 ### `.faulted(f)`
 
-Returns the contained `Inquiry` object value, after running function `f` against the `Fail` list -- but only if there are items in that list.
+Runs function `f` against the `Fail` list -- but only if there are items in that list. Otherwise returns the `Inquiry`.
 
 i.e., "Run the function when something fails."
 
@@ -318,7 +318,7 @@ Functionally equivalent to `.conclude(f, x => x)`.
 
 ### `.cleared(f)`
 
-Returns the contained `Inquiry` object value, after running function `f` against the `Pass` list -- but only if there are no items in the `Fail` list.
+Runs function `f` against the `Pass` list -- but only if there are no items in the `Fail` list. Otherwise, returns the `Inquiry`.
 
 i.e., "Run the function when everything passes."
 
@@ -326,7 +326,7 @@ Functionally opposite of `.faulted(f)`. These two can be in the same chain.
 
 ### `.suffice(f)`
 
-Returns the contained `Inquiry` object value, after running function `f` against the `Pass` list -- but only if there are items in the `Pass` list. (This is a `Pass`-preferring version of `faulted`.)
+Runs function `f` against the `Pass` list -- but only if there are items in the `Pass` list. Otherwise, returns the `Inquiry`. (This is a `Pass`-preferring version of `faulted`.)
 
 i.e., "Run the function when something passes."
 
@@ -334,7 +334,7 @@ Functionally equivalent to `.conclude(x => x, f)`.
 
 ### `.scratch(f)`
 
-Returns the contained `Inquiry` object value, after running function `f` against the `Pass` list -- but only if there are no items in the `Pass` list.
+Runs function `f` against the `Pass` list -- but only if there are no items in the `Pass` list. Otherwise, returns the `Inquiry`.
 
 i.e., "Run the function when everything fails"
 
