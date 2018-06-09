@@ -1,11 +1,11 @@
 # Inquiry
-### v0.19.1
+### v0.19.2
 
 [![Build Status](https://travis-ci.com/rgeraldporter/inquiry-monad.svg?branch=master)](https://travis-ci.com/rgeraldporter/inquiry-monad)
 
 Inquiry creates a process flow that allows one to chain multiple functions together to test a value ("subject"), granting observability over all results and returning a full report containing successes, failures, and the original test subject without mutation.
 
-Inquiry's API is comparible to Promises, and is designed to have an expressive, friendly API. It utilizes the concepts of functional programming, though experience with functional programming is not meant to be a requirement for ease of use.
+Inquiry's API is comparible to Promise chains, and is designed to have an expressive, friendly API. It utilizes the concepts of functional programming, though experience with functional programming is not meant to be a requirement for ease of use.
 
 To those experienced with functional programming, Inquiry can be compared with an `Either` or a `Validation`.
 
@@ -32,7 +32,7 @@ Inquiry.subject(subjectData)
     .inquire(x => x.d ? Pass('is no d value') : Fail('has a d value')) // anonymous functions work as well
     .join();
 
-// >> result: {subject: {a:1, b:false}, pass: Pass(['has a', 'b is valid', 'has no c value', 'has no d value']), fail: Fail([]), iou: IOU([])}
+// result: {subject: {a:1, b:false}, pass: Pass(['has a', 'b is valid', 'has no c value', 'has no d value']), fail: Fail([]), iou: IOU([])}
 
 /* With failures */
 const subjectDataWithFailure = {
@@ -47,14 +47,13 @@ Inquiry.subject(subjectDataWithFailure)
     .inquire(hasNoC)
     .join();
 
-// >> result: {subject: {a:1, b:'string', c:true}, pass: Pass(['has a']), fail: Fail(['b is invalid', 'has c value']), iou: IOU()}
+// result: {subject: {a:1, b:'string', c:true}, pass: Pass(['has a']), fail: Fail(['b is invalid', 'has c value']), iou: IOU()}
 
 /* With async Promises */
 const checkDb = async x =>
     Promise.resolve(Pass('pretend I looked something up in a db'));
 
 InquiryP.subject(subjectDataWithFailure)
-    .informant(console.log)
     .inquire(checkDb)
     .inquire(hasA)
     .inquire(validateB)
@@ -62,7 +61,7 @@ InquiryP.subject(subjectDataWithFailure)
     .conclude(x => x, y => y);
 // .conclude or another "unwrap" fn is necessary to complete "IOUs" to give a clean exit (resolve all unresolved Promises)
 
-// >> Promise.resolve(result: {subject: {a:1, b:'string', c:true}, pass: Pass(['has a', 'pretend I looked something up in a db']), fail: Fail(['b is invalid', 'has c value']), iou: IOU()})
+// result: Promise.resolve(result: {subject: {a:1, b:'string', c:true}, pass: Pass(['has a', 'pretend I looked something up in a db']), fail: Fail(['b is invalid', 'has c value']), iou: IOU()})
 ```
 
 ## Get started
@@ -92,7 +91,7 @@ There are three result types used in Inquiry:
 * `Fail`: a negative result
 * `IOU`: a result to be determined later (relevant to `InquiryP` and `InquiryF` chains only)
 
-Each of these types is a monad, and come with built-in methods for handling and exposing their data without mutating the values. See `Monad methods` below for details on how to handle results within these types.
+Each of these types is a monad, and come with built-in methods for handling and exposing their data without mutating the values. See "Monad methods" below for details on how to handle results within these types.
 
 ## Inquiry subject type
 
@@ -101,7 +100,7 @@ The subject uses `Maybe` to contain the value, which can result in one of two ty
 * `Just`: a non-null, non-undefined value
 * `Nothing`: an undefined or null value
 
-These are also monads, see `Monad methods` below for details on how to handle these types.
+These are also monads, see "Monad methods" below for details on how to handle these types.
 
 ## Use
 
@@ -127,7 +126,7 @@ For those who might wish to compare to a conventional `Either` (`Left`/`Right`) 
 
 ## `Inquiry.subject(value)`
 
-Returns a new `Inquiry` monad, which contains an object with properties `subject`, `pass`, `fail`, `iou`, and a single method,  `informant`.
+Returns a new `Inquiry` monad, which contains an object with properties `subject`, `pass`, `fail`, `iou`, and a single method, `informant`.
 
 * `subject`: the `value` that was passed to `Inquiry.subject`. This value is contained within a `Maybe` monad, meaning it will either be `Just(value)` or `Nothing()`.
 * `pass`: a `Pass` monad, containing an array of values
@@ -146,14 +145,15 @@ Also same, however it returns a monad called `InquiryF` which enables function `
 As a basic example:
 
 ```js
-const value = { something: true };
-console.log(
-    Inquiry.subject(value)
-        .informant(console.log)
-        .join()
-); // .join will reveal contained value
+const checkDb = x =>
+    Future.of(Pass('pretend I looked something up in a db'));
 
-// > {subject: Just({something: true}), pass: Pass([]), fail: Fail([]), iou: IOU([]), informant: console.log};
+const value = { something: true };
+    InquiryF.subject(value)
+        .inquire(checkDb)
+        .fork(console.error, console.log);
+
+// console.log >> {subject: Just({something: true}), pass: Pass(['pretend I looked something up in a db']), fail: Fail([]), iou: IOU([]), informant: null};
 ```
 
 ## `Inquiry.of(inquiry)`
@@ -186,7 +186,7 @@ console.log(result);
 
 ### `.inquireMap(f, i)`
 
-Map version of `.inquire`. Pass function `f` that can curried `i` and `subject`, and collect `Pass`, `Fail`, `IOU` from the results.
+Map version of `.inquire`. Pass function `f` that can curry both `i` and `subject`, and collect `Pass`, `Fail`, `IOU` from the results.
 
 This can be useful to prevent sprawling `.inquire` chains.
 
@@ -347,7 +347,7 @@ console.log(results);
 
 Runs function `f` against the `Fail` list -- but only if there are items in that list. Otherwise returns the `Inquiry`.
 
-i.e., "Run the function when something fails."
+i.e., "Run the function if something fails."
 
 Functionally equivalent to `.conclude(f, x => x)`.
 
@@ -355,7 +355,7 @@ Functionally equivalent to `.conclude(f, x => x)`.
 
 Runs function `f` against the `Pass` list -- but only if there are no items in the `Fail` list. Otherwise, returns the `Inquiry`.
 
-i.e., "Run the function when everything passes."
+i.e., "Run the function if everything passes."
 
 Functionally opposite of `.faulted(f)`. These two can be in the same chain.
 
@@ -363,15 +363,15 @@ Functionally opposite of `.faulted(f)`. These two can be in the same chain.
 
 Runs function `f` against the `Pass` list -- but only if there are items in the `Pass` list. Otherwise, returns the `Inquiry`. (This is a `Pass`-preferring version of `faulted`.)
 
-i.e., "Run the function when something passes."
+i.e., "Run the function if something passes."
 
 Functionally equivalent to `.conclude(x => x, f)`.
 
 ### `.scratch(f)`
 
-Runs function `f` against the `Pass` list -- but only if there are no items in the `Pass` list. Otherwise, returns the `Inquiry`.
+Runs function `f` against the `Fail` list -- but only if there are no items in the `Pass` list. Otherwise, returns the `Inquiry`.
 
-i.e., "Run the function when everything fails"
+i.e., "Run the function if everything fails"
 
 Functionally opposite of `.suffice(f)`. These two can be in the same chain.
 
