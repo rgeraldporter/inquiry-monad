@@ -205,12 +205,12 @@ const planets = [
 ];
 
 // curried, takes two parameters
-const startsWith = (word: string) => (checks: any) =>
+const startsWith = (word) => (checks) =>
     word.startsWith(checks.letter) ? Pass(word) : Fail(word);
 
 Inquiry.subject({ letter: 'M' })
     .inquireMap(startsWith, planets)
-    .suffice((pass: PassFailMonad) => {
+    .suffice((pass) => {
         console.log(pass.join());
     });
 
