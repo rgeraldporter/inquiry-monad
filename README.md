@@ -1,13 +1,11 @@
 # Inquiry
-### v0.19.2
+### v0.19.4
 
 [![Build Status](https://travis-ci.com/rgeraldporter/inquiry-monad.svg?branch=master)](https://travis-ci.com/rgeraldporter/inquiry-monad)
 
-Inquiry creates a process flow that allows one to chain multiple functions together to test a value ("subject"), granting observability over all results and returning a full report containing successes, failures, and the original test subject without mutation.
+Inquiry is a process flow that allows one ask multiple questions about a subject value. This process grants observability over all results, returning a collection of all successes, failures, and the original subject.
 
-Inquiry's API is comparible to Promise chains, and is designed to have an expressive, friendly API. It utilizes the concepts of functional programming, though experience with functional programming is not meant to be a requirement for ease of use.
-
-To those experienced with functional programming, Inquiry can be compared with an `Either` or a `Validation`.
+Inquiry's API is comparible to Promise chains, and is designed to have an expressive, friendly API. It utilizes the concepts of functional programming, though experience with functional programming is not meant to be a requirement for ease of use. (To those experienced with functional programming, Inquiry can be compared with an `Either` or a `Validation`.)
 
 ## Basic examples
 
@@ -19,6 +17,7 @@ const subjectData = {
     b: false
 };
 
+/* "question" functions, which return Pass() or Fail() */
 const hasA = x => (x.a ? Pass('has a') : Fail('does not have a'));
 const validateB = x =>
     x.b && typeof x.b === 'boolean' ? Pass('b is valid') : Fail('b is invalid');
@@ -75,6 +74,12 @@ Optionally, if you are using [`fluture`](https://www.npmjs.com/package/fluture) 
 npm install inquiry-monad-futures -S
 ```
 
+## Demos
+
+Some mini-projects will be included soon in this document to give practical examples of use. Where possible I will include links directly to a [Glitch](https://glitch.com) project so you may remix the code and play with the API.
+
+ * [Birds Around Me](https://glitch.com/edit/#!/local-birds?path=server.js:70:1) - reads a user's GPS position, and retrieves birds reported to [eBird](https://ebird.org/) via eBird API. Inquiry is used to then answer a series of questions about the data.
+
 ## Inquiry process types
 
 There are three process types for Inquiry:
@@ -106,11 +111,13 @@ These are also monads, see "Monad methods" below for details on how to handle th
 
 _Note that unless otherwise stated in this document, `Inquiry`, `InquiryP`, and `InquiryF` are interchangeable, and mostly share the same API._
 
-Inquiry can take any _subject_ and test it against various functions via the `.inquire` method. This results in a return value containing a list of result types for `Fail`, `Pass`, and `IOU`, in addition to the original `subject`.
+Inquiry can take any _subject_ and test it against various question functions via the `.inquire` method. The question functions should return `Pass` or `Fail` values.
 
-The advantage over a Promise chain is that the original subject and each individual result is retained through the chain of `.inquire` calls, giving complete observability over the data lifecycle.
+The result is a collection containing a list of result types for `Fail`, `Pass`, and `IOU`, in addition to the original `subject`.
 
-Additionally, this gives the ability to contain Promises within a monadic structure which bolsters immutibility, and allows better control over side-effects.
+The advantage over a Promise chain is that the original subject and each individual function return is retained through the chain of `.inquire` calls, giving observability over the chain.
+
+Additionally, this gives the ability to contain Promises better, in a more functional-friendly style.
 
 ## Comparing to `Either` or `Validation`
 
@@ -136,7 +143,7 @@ Returns a new `Inquiry` monad, which contains an object with properties `subject
 
 ## `InquiryP.subject(value)`
 
-Same as the above, however it returns a monad called `InquiryP` which enables function `f` in `.inquire(f)` to return a Promise.
+Same as the above, however it returns a monad called `InquiryP` which enables function `f` in `.inquire(f)` to return a Promise. This also means that all unwrap methods will be returning a Promise.
 
 ## `InquiryF.subject(value)`
 
@@ -160,7 +167,7 @@ const value = { something: true };
 
 Using the Inquiry object structure, you may also assemble your own `Inquiry` monad "manually" with `Inquiry.of` though this is usually only necessary if using more standard functional programming methods such as `.chain` and `.ap`.
 
-If you do not match the object strucutre, this constructor will fall back on converting the parameter into the `subject`.
+If you do not match the object strucutre, this constructor will fall back on converting the parameter into the `subject` and will emit a console warning.
 
 # `Inquiry` methods
 

@@ -71,3 +71,5 @@ interface InquiryMonad extends Monad {
     isInquiry: boolean;
     await?: Function;
 }
+
+// @todo add type for questions, a function that returns Pass or Fail
