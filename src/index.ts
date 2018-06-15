@@ -110,7 +110,7 @@ const Inquiry = (x: Inquiry): InquiryMonad => ({
             inquireResponse.isPass ||
             inquireResponse.isInquiry
             ? inquireResponse.answer(x, f.name, Inquiry)
-            : Pass(inquireResponse); // @todo test if this works? Shouldn't it need to do a .answer?
+            : Pass(inquireResponse).answer(x, f.name, Inquiry);
     },
 
     inquireMap: (f: Function, i: Array<any>): InquiryMonad =>
@@ -123,7 +123,7 @@ const Inquiry = (x: Inquiry): InquiryMonad => ({
                     inquireResponse.isPass ||
                     inquireResponse.isInquiry
                     ? inquireResponse.answer(inq.join(), f.name, Inquiry)
-                    : Pass(inquireResponse); // @todo test if this works? Shouldn't it need to do a .answer?
+                    : Pass(inquireResponse).answer(x, f.name, Inquiry);
             },
 
             // initial Inquiry will be what is in `x` now
@@ -271,7 +271,7 @@ const InquiryP = (x: Inquiry): InquiryMonad => ({
         const syncronousResult = (response: any) =>
             response.isFail || response.isPass || response.isInquiry
                 ? response.answer(x, f.name, InquiryP)
-                : Pass(response);
+                : Pass(response).answer(x, f.name, InquiryP);
 
         return inquireResponse.then
             ? InquiryP({
@@ -292,7 +292,7 @@ const InquiryP = (x: Inquiry): InquiryMonad => ({
                 const syncronousResult = (response: any) =>
                     response.isFail || response.isPass || response.isInquiry
                         ? response.answer(inq.join(), f.name, InquiryP)
-                        : Pass(response);
+                        : Pass(response).answer(x, f.name, InquiryP);
 
                 return inquireResponse.then
                     ? InquiryP({
@@ -405,6 +405,7 @@ const InquiryP = (x: Inquiry): InquiryMonad => ({
             .then(i => (i.isInquiry ? i.join() : i))
             .then(y => (y.fail.isEmpty() ? InquiryP(y) : f(y.fail))),
 
+    // @todo redo this -- suffice can return an Inquiry or anything, which makes it unchainable
     // If any passes, handoff aggregated passes to supplied function; if no passes, return existing InquiryP
     suffice: async (f: Function): Promise<InquiryMonad | Array<any>> =>
         Promise.all(x.iou.join())

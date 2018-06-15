@@ -364,6 +364,15 @@ describe('The module', () => {
             });
     });
 
+    it('should all an inquire to return a non-Fail, non-Pass, and accept it as a Pass', () => {
+        return (InquiryP as any)
+            .subject(1)
+            .inquire((x: any) => x + 1)
+            .suffice((pass: PassFailMonad) => {
+                expect(pass.join()).toEqual([2]);
+            });
+    });
+
     it('should be able to map a function as an inquireMap', () => {
         const planets = [
             'Mercury',
