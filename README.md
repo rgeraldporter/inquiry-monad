@@ -1,5 +1,5 @@
 # Inquiry
-### v0.19.5
+### v0.20.0
 
 [![Build Status](https://travis-ci.com/rgeraldporter/inquiry-monad.svg?branch=master)](https://travis-ci.com/rgeraldporter/inquiry-monad)
 
@@ -336,13 +336,13 @@ const results = Inquiry.subject(5)
     .inquire(isMoreThanOne)
     .inquire(isMoreThanTen)
     .conclude(
-        x => ({
-            failCount: x.join().length,
-            fails: x.join()
+        a => ({
+            failCount: a.join().length,
+            fails: a.join()
         }),
-        y => ({
-            passCount: y.join().length,
-            passes: y.join()
+        b => ({
+            passCount: b.join().length,
+            passes: b.join()
         })
     );
 
@@ -352,15 +352,15 @@ console.log(results);
 
 ### `.faulted(f)`
 
-Runs function `f` against the `Fail` list -- but only if there are items in that list. Otherwise returns the `Inquiry`.
+Runs function `f` against the `Fail` list -- but only if there are items in that list. Otherwise, runs a no-op function.
 
 i.e., "Run the function if something fails."
 
-Functionally equivalent to `.conclude(f, x => x)`.
+Functionally equivalent to `.conclude(f, x => {})`.
 
 ### `.cleared(f)`
 
-Runs function `f` against the `Pass` list -- but only if there are no items in the `Fail` list. Otherwise, returns the `Inquiry`.
+Runs function `f` against the `Pass` list -- but only if there are no items in the `Fail` list. Otherwise, runs a no-op function.
 
 i.e., "Run the function if everything passes."
 
@@ -368,15 +368,15 @@ Functionally opposite of `.faulted(f)`. These two can be in the same chain.
 
 ### `.suffice(f)`
 
-Runs function `f` against the `Pass` list -- but only if there are items in the `Pass` list. Otherwise, returns the `Inquiry`. (This is a `Pass`-preferring version of `faulted`.)
+Runs function `f` against the `Pass` list -- but only if there are items in the `Pass` list. Otherwise, runs a no-op function.
 
 i.e., "Run the function if something passes."
 
-Functionally equivalent to `.conclude(x => x, f)`.
+Functionally equivalent to `.conclude(x => {}, f)`.
 
 ### `.scratch(f)`
 
-Runs function `f` against the `Fail` list -- but only if there are no items in the `Pass` list. Otherwise, returns the `Inquiry`.
+Runs function `f` against the `Fail` list -- but only if there are no items in the `Pass` list. Otherwise, runs a no-op function.
 
 i.e., "Run the function if everything fails"
 
@@ -488,13 +488,21 @@ InquiryP.subject(5)
 
 Run a function `f` only if the `Fail` list has contents.
 
-i.e., "Run the function if there are any fails."
+i.e., "Run the function if there are any fails thus far."
 
-**NOTE: Function `f` must return an `Inquiry`, via the constructor `of`**.
+**You must return the parameter passed to the function.**
+
+e.g. 
+```js
+    .breakpoint(x => {
+        // do something
+        return x;
+    });
+```
 
 The `InquiryP` and `InquiryF` versions of this will wait for outstanding IOUs to resolve.
 
-Useful if you'd like to handle `Fail` results early for some reason.
+Useful if you'd like to handle `Fail` results early for some reason, such as throwing a fatal error or notifying an external stakeholder.
 
 ```js
 const isMoreThanOne = x =>
@@ -510,12 +518,12 @@ Inquiry.subject(5)
     .inquire(isMoreThanOne)
     .breakpoint(x => {
         console.warn('after one', x.fail.join()); // will not happen
-        return Inquiry.of(x);
+        return x;
     })
     .inquire(isMoreThanTen)
     .breakpoint(x => {
         console.warn('after ten', x.fail.join()); // this will run
-        return Inquiry.of(x);
+        return x;
     })
     .inquire(isMoreThanTwenty);
 ```
@@ -524,9 +532,17 @@ Inquiry.subject(5)
 
 Run a function `f` only if `Pass` list has contents. Unlike `fork` or `cleared` this triggers if there are any results in the `Pass` list, regardless of how many results exist within the `Fail` list.
 
-i.e., "Run the function if there are any passes."
+i.e., "Run the function if there are any passes thus far."
 
-**NOTE: Function `f` must return an `Inquiry`, via the constructor `of`**.
+**You must return the parameter passed to the function.**
+
+e.g. 
+```js
+    .milestone(x => {
+        // do something
+        return x;
+    });
+```
 
 The `InquiryP` and `InquiryF` versions of this will wait for outstanding IOUs to resolve.
 

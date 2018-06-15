@@ -1,5 +1,7 @@
 import { Maybe } from 'simple-maybe';
 
+const noop = () => {};
+
 const IOU = <T>(x: T | Array<T>): IOUMonad => ({
     map: (f: Function) => IOU(f(x)),
     chain: (f: Function) => f(x),
@@ -178,10 +180,10 @@ const Inquiry = (x: Inquiry): InquiryMonad => ({
     join: (): Inquiry => x,
 
     // execute the provided function if there are failures, else continue
-    breakpoint: (f: Function) => (x.fail.join().length ? f(x) : Inquiry(x)),
+    breakpoint: (f: Function) => (x.fail.join().length ? Inquiry(f(x)) : Inquiry(x)),
 
     // execute the provided function if there are passes, else continue
-    milestone: (f: Function) => (x.pass.join().length ? f(x) : Inquiry(x)),
+    milestone: (f: Function) => (x.pass.join().length ? Inquiry(f(x)) : Inquiry(x)),
 
     // internal method: execute informant, return new InquiryP() based on updated results
     answer: (i: Inquiry, n: string, _: Function) => {
@@ -206,17 +208,17 @@ const Inquiry = (x: Inquiry): InquiryMonad => ({
         informant: x.informant
     }),
 
-    // If there are no fails, handoff aggregated passes to supplied function; if any fails, return existing Inquiry
-    cleared: (f: Function) => (x.fail.isEmpty() ? f(x.pass) : Inquiry(x)),
+    // If there are no fails, handoff aggregated passes to supplied function; if any fails, return noop
+    cleared: (f: Function) => (x.fail.isEmpty() ? f(x.pass) : noop()),
 
-    // If there are fails, handoff aggregated fails to supplied function; if no fails, return existing Inquiry
-    faulted: (f: Function) => (x.fail.isEmpty() ? Inquiry(x) : f(x.fail)),
+    // If there are fails, handoff aggregated fails to supplied function; if no fails, return noop
+    faulted: (f: Function) => (x.fail.isEmpty() ? noop() : f(x.fail)),
 
-    // If there are passes, handoff aggregated passes to supplied function; if no passes, return existing Inquiry
-    suffice: (f: Function) => (x.pass.isEmpty() ? Inquiry(x) : f(x.pass)),
+    // If there are passes, handoff aggregated passes to supplied function; if no passes, return noop
+    suffice: (f: Function) => (x.pass.isEmpty() ? noop() : f(x.pass)),
 
-    // If there are no passes, handoff aggregated fails to supplied function; if any passes, return existing Inquiry
-    scratch: (f: Function) => (x.pass.isEmpty() ? f(x.fail) : Inquiry(x)),
+    // If there are no passes, handoff aggregated fails to supplied function; if any passes, return noop
+    scratch: (f: Function) => (x.pass.isEmpty() ? f(x.fail) : noop()),
 
     // unwrap left if any fails, right if not
     fork: (f: Function, g: Function) =>
@@ -357,10 +359,10 @@ const InquiryP = (x: Inquiry): InquiryMonad => ({
     join: (): Inquiry => x,
 
     // execute the provided function if there are failures, else continue
-    breakpoint: (f: Function) => (x.fail.join().length ? f(x) : InquiryP(x)),
+    breakpoint: (f: Function) => (x.fail.join().length ? Inquiry(f(x)) : InquiryP(x)),
 
     // execute the provided function if there are passes, else continue
-    milestone: (f: Function) => (x.pass.join().length ? f(x) : InquiryP(x)),
+    milestone: (f: Function) => (x.pass.join().length ? Inquiry(f(x)) : InquiryP(x)),
 
     // internal method: execute informant, return new InquiryP() based on updated results
     answer: (i: Inquiry, n: string, _: Function): InquiryMonad => {
@@ -390,36 +392,35 @@ const InquiryP = (x: Inquiry): InquiryMonad => ({
                 informant: y.informant
             })),
 
-    // If no fails, handoff aggregated passes to supplied function; if fails, return existing InquiryP
+    // If no fails, handoff aggregated passes to supplied function; if fails, return noop
     cleared: async (f: Function): Promise<InquiryMonad | Array<any>> =>
         Promise.all(x.iou.join())
             .then(buildInq(x))
             .then(i => (i.isInquiry ? i.join() : i))
-            .then(y => (y.fail.isEmpty() ? f(y.pass) : InquiryP(y)))
+            .then(y => (y.fail.isEmpty() ? f(y.pass) : noop()))
             .catch(err => console.error('err', err)),
 
-    // If fails, handoff aggregated fails to supplied function; if no fails, return existing InquiryP
+    // If fails, handoff aggregated fails to supplied function; if no fails, return noop
     faulted: async (f: Function): Promise<InquiryMonad | Array<any>> =>
         Promise.all(x.iou.join())
             .then(buildInq(x))
             .then(i => (i.isInquiry ? i.join() : i))
-            .then(y => (y.fail.isEmpty() ? InquiryP(y) : f(y.fail))),
+            .then(y => (y.fail.isEmpty() ? noop() : f(y.fail))),
 
-    // @todo redo this -- suffice can return an Inquiry or anything, which makes it unchainable
-    // If any passes, handoff aggregated passes to supplied function; if no passes, return existing InquiryP
+    // If any passes, handoff aggregated passes to supplied function; if no passes, return noop
     suffice: async (f: Function): Promise<InquiryMonad | Array<any>> =>
         Promise.all(x.iou.join())
             .then(buildInq(x))
             .then(i => (i.isInquiry ? i.join() : i))
-            .then(y => (y.pass.isEmpty() ? InquiryP(y) : f(y.pass)))
+            .then(y => (y.pass.isEmpty() ? noop() : f(y.pass)))
             .catch(err => console.error('err', err)),
 
-    // If no passes, handoff aggregated fails to supplied function; if any passes, return existing InquiryP
+    // If no passes, handoff aggregated fails to supplied function; if any passes, return noop
     scratch: async (f: Function): Promise<InquiryMonad | Array<any>> =>
         Promise.all(x.iou.join())
             .then(buildInq(x))
             .then(i => (i.isInquiry ? i.join() : i))
-            .then(y => (y.pass.isEmpty() ? f(y.fail) : InquiryP(y))),
+            .then(y => (y.pass.isEmpty() ? f(y.fail) : noop())),
 
     // Take left function and hands off fails if any, otherwise takes right function and hands off passes to that function
     fork: async (f: Function, g: Function): Promise<Array<any>> =>

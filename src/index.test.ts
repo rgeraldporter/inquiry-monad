@@ -242,7 +242,7 @@ describe('The module', () => {
                 reachedBreakpoint = 1;
                 x.fail = Fail([]);
 
-                return Inquiry.of(x);
+                return x;
             })
             .inquire(findHeight)
             .inquire(nameSpelledRight)
@@ -289,7 +289,7 @@ describe('The module', () => {
                 // this is not a practical example, usually one one do some kind of exit
                 reachedMilestone = 1;
                 x.pass = Pass([]);
-                return Inquiry.of(x);
+                return x;
             })
             .inquire(nameSpelledRight)
             .inquire(hasRecords)
