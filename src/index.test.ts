@@ -182,6 +182,7 @@ describe('The module', () => {
             .inquire(oldEnough)
             .inquire(findHeight)
             .inquire(resolveAfter2Seconds)
+            .inquire(resolveAfter10ms)
             .inquire(nameSpelledRight)
             .inquire(hasRecords)
             .inquire(mathGrade)
@@ -194,7 +195,7 @@ describe('The module', () => {
                 },
                 (y: PassMonad) => {
                     expect(y.inspect()).toBe(
-                        'Pass([object Object],[object Object],passed)'
+                        'Pass([object Object],[object Object],passed,passed 10ms)'
                     );
                     return y;
                 }
@@ -438,8 +439,9 @@ describe('The module', () => {
             .inquire(resolveAfter1Second)
             .inquire(resolveAfter10ms)
             .inquireMap(startsWith, planets)
+            .inquire(resolveAfter10ms)
             .suffice((pass: PassFailMonad) => {
-                expect(pass.join()).toEqual(['Mercury', 'Mars', 'passed 10ms', 'passed']);
+                expect(pass.join()).toEqual(['Mercury', 'Mars', 'passed', 'passed 10ms', 'passed 10ms']);
             });
     });
 });

@@ -1,5 +1,5 @@
 # Inquiry
-### v0.21.1
+### v0.21.2
 
 [![Build Status](https://travis-ci.com/rgeraldporter/inquiry-monad.svg?branch=master)](https://travis-ci.com/rgeraldporter/inquiry-monad)
 

@@ -268,7 +268,7 @@ const InquiryPOf = (x: Inquiry) =>
 
 const buildInq = <T>(x: T) => (
     vals: Array<any> // @todo find a way to produce fn name
-) => vals.reduce((acc, cur) => cur.answer(acc, '(async fn)', InquiryP), x);
+) => vals.reduce((acc, cur) => cur.answer(acc, '(async fn)', InquiryP).join(), x);
 
 const InquiryP = (x: Inquiry): InquiryMonad => ({
     // Inquire: core method
