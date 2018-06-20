@@ -32,7 +32,7 @@ function resolveAfter1Second(x: any) {
 function resolveAfter10ms(x: any) {
     return new Promise(resolve => {
         setTimeout(() => {
-            resolve(Pass('passed'));
+            resolve(Pass('passed 10ms'));
         }, 10);
     });
 }
@@ -435,10 +435,11 @@ describe('The module', () => {
 
         return (InquiryP as any)
             .subject({ letter: 'M' })
+            .inquire(resolveAfter1Second)
             .inquire(resolveAfter10ms)
             .inquireMap(startsWith, planets)
             .suffice((pass: PassFailMonad) => {
-                expect(pass.join()).toEqual(['Mercury', 'Mars', 'passed']);
+                expect(pass.join()).toEqual(['Mercury', 'Mars', 'passed 10ms', 'passed']);
             });
     });
 });
