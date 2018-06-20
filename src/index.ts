@@ -224,6 +224,10 @@ const Inquiry = (x: Inquiry): InquiryMonad => ({
     fork: (f: Function, g: Function) =>
         x.fail.join().length ? f(x.fail) : g(x.pass),
 
+    // unwrap left if any passes, right if not
+    fold: (f: Function, g: Function) =>
+        x.pass.join().length ? f(x.pass) : g(x.fail),
+
     // return a merged pass/fail
     zip: (f: Function): Array<any> => f(x.fail.join().concat(x.pass.join())), // return a concat of pass/fails
 
@@ -428,6 +432,13 @@ const InquiryP = (x: Inquiry): InquiryMonad => ({
             .then(buildInq(x))
             .then(i => (i.isInquiry ? i.join() : i))
             .then(y => (y.fail.join().length ? f(y.fail) : g(y.pass))),
+
+    // Take left function and hands off fails if any, otherwise takes right function and hands off passes to that function
+    fold: async (f: Function, g: Function): Promise<Array<any>> =>
+        Promise.all(x.iou.join())
+            .then(buildInq(x))
+            .then(i => (i.isInquiry ? i.join() : i))
+            .then(y => (y.pass.join().length ? f(y.pass) : g(y.fail))),
 
     // return a Promise containing a merged fail/pass resultset array
     zip: async (f: Function): Promise<Array<any>> =>

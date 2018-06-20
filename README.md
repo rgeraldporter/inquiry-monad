@@ -431,6 +431,14 @@ console.log(results2);
 // > {passCount: 2, passes: ['Is greater than 1', 'Is greater than 10']}
 ```
 
+## `.fold(f, g)`
+
+Either run a function `f` if there are _any_ values in the `Pass` list, or `g` if there are _no_ values in the `Pass` list, returning only the result of the function executed.
+
+i.e. "Run one function if something passed, another if nothing passed."
+
+This is similar to `.fork` but with weighting towards `Pass` rather than `Fail`.
+
 ### `.zip(f)`
 
 Run function `f` against an `Array` resulting from a merge of `Pass` and `Fail` lists.

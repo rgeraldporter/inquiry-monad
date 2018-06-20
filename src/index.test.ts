@@ -154,6 +154,28 @@ describe('The module', () => {
             );
     });
 
+    it('should be able to make many checks and run a fold', () => {
+        const result = (Inquiry as any)
+            .subject({ name: 'test', age: 14, description: 'blah' })
+            .inquire(oldEnough)
+            .inquire(findHeight)
+            .inquire(nameSpelledRight)
+            .inquire(hasRecords)
+            .inquire(mathGrade)
+            .fold(
+                (x: PassMonad) => {
+                    expect(x.inspect()).toBe(
+                        "Pass(old enough,[object Object],[object Object])"
+                    );
+                    return x.join();
+                },
+                (y: FailMonad) => {
+                    expect(y.inspect()).toBe('this should not run');
+                    return y.join();
+                }
+            );
+    });
+
     it('should be able to make many checks, including async ones, and run a conclude and return the subject unchanged', () => {
         return (InquiryP as any)
             .subject({ name: 'test', age: 10, description: 'blah' })

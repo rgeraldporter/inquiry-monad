@@ -58,6 +58,7 @@ interface InquiryMonad extends Monad {
     zip: Function;
     swap: Function;
     fork: Function;
+    fold: Function;
     faulted: Function;
     cleared: Function;
     suffice: Function;
