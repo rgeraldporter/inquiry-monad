@@ -1,5 +1,5 @@
 # Inquiry
-### v0.21.2
+### v0.21.3
 
 [![Build Status](https://travis-ci.com/rgeraldporter/inquiry-monad.svg?branch=master)](https://travis-ci.com/rgeraldporter/inquiry-monad)
 
@@ -643,7 +643,7 @@ const tripleFails = fails.map(R.multiply(3))
 console.log(doublePasses.inspect());
 // > Pass([2, 4])
 
-console.log(tripeFails.inspect());
+console.log(tripleFails.inspect());
 // > Fail([15, 30, 90])
 
 // since `Inquiry` is a monad containing a strictly structured Object type, simple maps will not work
