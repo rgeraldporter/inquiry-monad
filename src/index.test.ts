@@ -9,7 +9,7 @@ import {
     PassMonad,
     FailMonad,
     InquiryValue
-} from 'inquiry-monad';
+} from './inquiry-monad';
 
 const oldEnough = (a: any) =>
     a.age > 13 ? Pass(['old enough']) : Fail(['not old enough']);

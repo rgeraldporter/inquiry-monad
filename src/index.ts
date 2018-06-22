@@ -7,7 +7,7 @@ import {
     PassMonad,
     FailMonad,
     InquiryValue
-} from 'inquiry-monad';
+} from './inquiry-monad';
 
 const noop = () => {};
 
