@@ -86,7 +86,7 @@ const Fail = <T>(x: Array<T> | T): FailMonad => ({
     isInquiry: false
 });
 
-const InquirySubject = <T>(x: T | InquiryMonad) =>
+const InquirySubject = (x: any | InquiryMonad): InquiryMonad =>
     (x as any).isInquiry
         ? x
         : Inquiry({
@@ -183,7 +183,7 @@ const Inquiry = (x: InquiryValue): InquiryMonad => ({
         }),
 
     // standard Monad methods
-    map: (f: Function): InquiryValue => InquirySubject(f(x)),
+    map: (f: Function): InquiryMonad => InquirySubject(f(x)),
     ap: (y: Monad) => y.map(x),
     chain: (f: Function) => f(x),
     join: (): InquiryValue => x,
@@ -250,7 +250,7 @@ const exportInquiry = {
     of: InquiryOf
 };
 
-const InquiryPSubject = <T>(x: T | InquiryMonad) =>
+const InquiryPSubject = (x: any | InquiryMonad): InquiryMonad =>
     (x as any).isInquiry
         ? x
         : InquiryP({
@@ -372,7 +372,7 @@ const InquiryP = (x: InquiryValue): InquiryMonad => ({
         }),
 
     // Standard monad methods - note that while these work, remember that `x` is a typed Object
-    map: (f: Function): InquiryValue => InquiryPSubject(f(x)), // cast required for now
+    map: (f: Function): InquiryMonad => InquiryPSubject(f(x)), // cast required for now
     ap: (y: Monad) => y.map(x),
     chain: (f: Function) => f(x),
     join: (): InquiryValue => x,
