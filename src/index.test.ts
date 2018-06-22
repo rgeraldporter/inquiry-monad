@@ -1,6 +1,15 @@
 import { Inquiry, InquiryP, Fail, Pass, IOU } from './index';
 import * as R from 'ramda';
 import { Maybe } from 'simple-maybe';
+import {
+    Monad,
+    InquiryMonad,
+    IOUMonad,
+    PassFailMonad,
+    PassMonad,
+    FailMonad,
+    InquiryValue
+} from 'inquiry-monad';
 
 const oldEnough = (a: any) =>
     a.age > 13 ? Pass(['old enough']) : Fail(['not old enough']);
@@ -42,7 +51,7 @@ describe('The module', () => {
         // this is trickier to do with a typed monad, but not impossible
         // we cannot just do some simple math as the value much adhere to type Inquiry
         // but the law seems to be provable with objects as much as they are with numbers
-        const a: Inquiry = {
+        const a: InquiryValue = {
             subject: Maybe.of(1),
             fail: Fail([]),
             pass: Pass([]),
@@ -50,7 +59,7 @@ describe('The module', () => {
             informant: (_: any) => _
         };
 
-        const f = (n: Inquiry): InquiryMonad =>
+        const f = (n: InquiryValue): InquiryMonad =>
             Inquiry.of(
                 Object.assign(n, {
                     subject: n.subject.map((x: number) => x + 1)
@@ -63,7 +72,7 @@ describe('The module', () => {
 
         expect(leftIdentity1.join()).toEqual(leftIdentity2.join());
 
-        const g = (n: Inquiry): InquiryMonad =>
+        const g = (n: InquiryValue): InquiryMonad =>
             Inquiry.of(
                 Object.assign(n, {
                     subject: n.subject.map((x: number) => ({
@@ -81,7 +90,7 @@ describe('The module', () => {
     });
 
     it('should satisfy the second monad law of right identity', () => {
-        const a: Inquiry = {
+        const a: InquiryValue = {
             subject: Maybe.of(3),
             fail: Fail([]),
             pass: Pass([]),
@@ -97,7 +106,7 @@ describe('The module', () => {
     });
 
     it('should satisfy the third monad law of associativity', () => {
-        const a: Inquiry = {
+        const a: InquiryValue = {
             subject: Maybe.of(30),
             fail: Fail([]),
             pass: Pass([]),
@@ -105,7 +114,7 @@ describe('The module', () => {
             informant: (_: any) => _
         };
 
-        const g = (n: Inquiry): InquiryMonad =>
+        const g = (n: InquiryValue): InquiryMonad =>
             Inquiry.of(
                 Object.assign(n, {
                     subject: n.subject.map((x: number) => ({
@@ -114,7 +123,7 @@ describe('The module', () => {
                     }))
                 })
             );
-        const f = (n: Inquiry): InquiryMonad =>
+        const f = (n: InquiryValue): InquiryMonad =>
             Inquiry.of(
                 Object.assign(n, {
                     subject: n.subject.map((x: number) => x + 1)
@@ -125,7 +134,7 @@ describe('The module', () => {
         const associativity1 = Inquiry.of(a)
             .chain(g)
             .chain(f);
-        const associativity2 = Inquiry.of(a).chain((x: Inquiry) =>
+        const associativity2 = Inquiry.of(a).chain((x: InquiryValue) =>
             g(x).chain(f)
         );
 
@@ -259,7 +268,7 @@ describe('The module', () => {
         const result = (Inquiry as any)
             .subject({ name: 'test', age: 11, description: 'blah' })
             .inquire(oldEnough)
-            .breakpoint((x: Inquiry) => {
+            .breakpoint((x: InquiryValue) => {
                 // clearing the existing failure, it will not appear at the end
                 // this is not a practical example, usually one one do some kind of exit
                 reachedBreakpoint = 1;
@@ -307,7 +316,7 @@ describe('The module', () => {
             .subject({ name: 'test', age: 11, description: 'blah' })
             .inquire(oldEnough)
             .inquire(findHeight)
-            .milestone((x: Inquiry) => {
+            .milestone((x: InquiryValue) => {
                 // clearing the existing pass, it will not appear at the end
                 // this is not a practical example, usually one one do some kind of exit
                 reachedMilestone = 1;

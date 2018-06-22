@@ -1,4 +1,13 @@
 import { Maybe } from 'simple-maybe';
+import {
+    Monad,
+    InquiryMonad,
+    IOUMonad,
+    PassFailMonad,
+    PassMonad,
+    FailMonad,
+    InquiryValue
+} from 'inquiry-monad';
 
 const noop = () => {};
 
@@ -31,7 +40,7 @@ const Pass = <T>(x: Array<T> | T): PassMonad => ({
     concat: (o: PassFailMonad) =>
         o.fold((r: any) => Pass((x as Array<T>).concat(r)), null),
     ap: (y: PassFailMonad) => (y.isPass ? y.concat(Pass(x)) : Pass(x)),
-    answer: (i: Inquiry, n: string = '(anonymous)', c: Function = Inquiry) => {
+    answer: (i: InquiryValue, n: string = '(anonymous)', c: Function = Inquiry) => {
         i.informant([n, Pass(x)]);
         return c({
             subject: i.subject,
@@ -60,7 +69,7 @@ const Fail = <T>(x: Array<T> | T): FailMonad => ({
     concat: (o: PassFailMonad) =>
         o.fork((r: any) => Fail((x as Array<T>).concat(r)), null),
     ap: (y: PassFailMonad) => (y.isPass ? Fail(x) : y.concat(Fail(x))),
-    answer: (i: Inquiry, n: string = '(anonymous)', c: Function = Inquiry) => {
+    answer: (i: InquiryValue, n: string = '(anonymous)', c: Function = Inquiry) => {
         i.informant([n, Fail(x)]);
         return c({
             subject: i.subject,
@@ -95,7 +104,7 @@ const warnTypeError = <T>(x: T) => {
     return InquirySubject(x);
 };
 
-const InquiryOf = (x: Inquiry) =>
+const InquiryOf = (x: InquiryValue) =>
     'subject' in x &&
     'fail' in x &&
     'pass' in x &&
@@ -104,7 +113,7 @@ const InquiryOf = (x: Inquiry) =>
         ? Inquiry(x)
         : warnTypeError(x);
 
-const Inquiry = (x: Inquiry): InquiryMonad => ({
+const Inquiry = (x: InquiryValue): InquiryMonad => ({
     // Inquire: core method
     inquire: (f: Function) => {
         const inquireResponse = f(x.subject.join());
@@ -174,19 +183,21 @@ const Inquiry = (x: Inquiry): InquiryMonad => ({
         }),
 
     // standard Monad methods
-    map: (f: Function): Inquiry => InquirySubject(f(x)),
+    map: (f: Function): InquiryValue => InquirySubject(f(x)),
     ap: (y: Monad) => y.map(x),
     chain: (f: Function) => f(x),
-    join: (): Inquiry => x,
+    join: (): InquiryValue => x,
 
     // execute the provided function if there are failures, else continue
-    breakpoint: (f: Function) => (x.fail.join().length ? Inquiry(f(x)) : Inquiry(x)),
+    breakpoint: (f: Function) =>
+        x.fail.join().length ? Inquiry(f(x)) : Inquiry(x),
 
     // execute the provided function if there are passes, else continue
-    milestone: (f: Function) => (x.pass.join().length ? Inquiry(f(x)) : Inquiry(x)),
+    milestone: (f: Function) =>
+        x.pass.join().length ? Inquiry(f(x)) : Inquiry(x),
 
     // internal method: execute informant, return new InquiryP() based on updated results
-    answer: (i: Inquiry, n: string, _: Function) => {
+    answer: (i: InquiryValue, n: string, _: Function) => {
         i.informant([n, Inquiry(x)]);
         return Inquiry({
             subject: i.subject,
@@ -200,7 +211,7 @@ const Inquiry = (x: Inquiry): InquiryMonad => ({
     // Unwrap methods
 
     // unwraps, mapping for both branches, full value returned
-    conclude: (f: Function, g: Function): Inquiry => ({
+    conclude: (f: Function, g: Function): InquiryValue => ({
         subject: x.subject,
         iou: x.iou,
         fail: f(x.fail),
@@ -257,7 +268,7 @@ const warnTypeErrorP = <T>(x: T) => {
     return InquiryPSubject(x);
 };
 
-const InquiryPOf = (x: Inquiry) =>
+const InquiryPOf = (x: InquiryValue) =>
     'subject' in x &&
     'fail' in x &&
     'pass' in x &&
@@ -268,9 +279,13 @@ const InquiryPOf = (x: Inquiry) =>
 
 const buildInq = <T>(x: T) => (
     vals: Array<any> // @todo find a way to produce fn name
-) => vals.reduce((acc, cur) => cur.answer(acc, '(async fn)', InquiryP).join(), x);
+) =>
+    vals.reduce(
+        (acc, cur) => cur.answer(acc, '(async fn)', InquiryP).join(),
+        x
+    );
 
-const InquiryP = (x: Inquiry): InquiryMonad => ({
+const InquiryP = (x: InquiryValue): InquiryMonad => ({
     // Inquire: core method
     inquire: (f: Function) => {
         const inquireResponse = f(x.subject.join());
@@ -357,19 +372,21 @@ const InquiryP = (x: Inquiry): InquiryMonad => ({
         }),
 
     // Standard monad methods - note that while these work, remember that `x` is a typed Object
-    map: (f: Function): Inquiry => InquiryPSubject(f(x)), // cast required for now
+    map: (f: Function): InquiryValue => InquiryPSubject(f(x)), // cast required for now
     ap: (y: Monad) => y.map(x),
     chain: (f: Function) => f(x),
-    join: (): Inquiry => x,
+    join: (): InquiryValue => x,
 
     // execute the provided function if there are failures, else continue
-    breakpoint: (f: Function) => (x.fail.join().length ? Inquiry(f(x)) : InquiryP(x)),
+    breakpoint: (f: Function) =>
+        x.fail.join().length ? Inquiry(f(x)) : InquiryP(x),
 
     // execute the provided function if there are passes, else continue
-    milestone: (f: Function) => (x.pass.join().length ? Inquiry(f(x)) : InquiryP(x)),
+    milestone: (f: Function) =>
+        x.pass.join().length ? Inquiry(f(x)) : InquiryP(x),
 
     // internal method: execute informant, return new InquiryP() based on updated results
-    answer: (i: Inquiry, n: string, _: Function): InquiryMonad => {
+    answer: (i: InquiryValue, n: string, _: Function): InquiryMonad => {
         i.informant([n, InquiryP(x)]);
         return InquiryP({
             subject: i.subject,
@@ -384,7 +401,7 @@ const InquiryP = (x: Inquiry): InquiryMonad => ({
 
     // @todo handle Promise.reject? Is it a failure or what?
     // Unwraps the Inquiry after ensuring all IOUs are completed
-    conclude: async (f: Function, g: Function): Promise<Inquiry> =>
+    conclude: async (f: Function, g: Function): Promise<InquiryValue> =>
         Promise.all(x.iou.join())
             .then(buildInq(x))
             .then(i => (i.isInquiry ? i.join() : i))
