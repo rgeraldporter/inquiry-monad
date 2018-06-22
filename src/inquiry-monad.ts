@@ -66,7 +66,6 @@ export interface InquiryMonad extends Monad {
     milestone: Function;
     answer: Function;
     conclude: Function;
-    isInquiry: boolean;
     await?: Function;
 }
 

@@ -141,6 +141,12 @@ describe('The module', () => {
         expect(associativity1.join()).toEqual(associativity2.join());
     });
 
+    it('should be able to figure out if it is being passed another inquiry in the subject', () => {
+        const inq1 = Inquiry.subject(1);
+        const inq2 = Inquiry.subject(inq1);
+        expect(inq2.join().subject.join()).toEqual(1);
+    });
+
     it('should be able to make many checks and run a fork', () => {
         const result = (Inquiry as any)
             .subject({ name: 'test', age: 14, description: 'blah' })
@@ -174,7 +180,7 @@ describe('The module', () => {
             .fold(
                 (x: PassMonad) => {
                     expect(x.inspect()).toBe(
-                        "Pass(old enough,[object Object],[object Object])"
+                        'Pass(old enough,[object Object],[object Object])'
                     );
                     return x.join();
                 },
@@ -450,7 +456,13 @@ describe('The module', () => {
             .inquireMap(startsWith, planets)
             .inquire(resolveAfter10ms)
             .suffice((pass: PassFailMonad) => {
-                expect(pass.join()).toEqual(['Mercury', 'Mars', 'passed', 'passed 10ms', 'passed 10ms']);
+                expect(pass.join()).toEqual([
+                    'Mercury',
+                    'Mars',
+                    'passed',
+                    'passed 10ms',
+                    'passed 10ms'
+                ]);
             });
     });
 });

@@ -11,6 +11,8 @@ import {
 
 const noop = () => {};
 
+const $$inquirySymbol: unique symbol = Symbol();
+
 const IOU = <T>(x: T | Array<T>): IOUMonad => ({
     map: (f: Function) => IOU(f(x)),
     chain: (f: Function) => f(x),
@@ -22,7 +24,8 @@ const IOU = <T>(x: T | Array<T>): IOUMonad => ({
     head: () => (Array.isArray(x) && x.length ? x[0] : []),
     tail: () => (Array.isArray(x) && x.length ? x[x.length - 1] : []),
     isEmpty: () => Boolean(!Array.isArray(x) || x.length === 0),
-    isInquiry: false,
+    // @ts-ignore no support yet for symbols as property names
+    [$$inquirySymbol]: false,
     isPass: false,
     isFail: false,
     isIOU: true
@@ -40,7 +43,11 @@ const Pass = <T>(x: Array<T> | T): PassMonad => ({
     concat: (o: PassFailMonad) =>
         o.fold((r: any) => Pass((x as Array<T>).concat(r)), null),
     ap: (y: PassFailMonad) => (y.isPass ? y.concat(Pass(x)) : Pass(x)),
-    answer: (i: InquiryValue, n: string = '(anonymous)', c: Function = Inquiry) => {
+    answer: (
+        i: InquiryValue,
+        n: string = '(anonymous)',
+        c: Function = Inquiry
+    ) => {
         i.informant([n, Pass(x)]);
         return c({
             subject: i.subject,
@@ -54,7 +61,8 @@ const Pass = <T>(x: Array<T> | T): PassMonad => ({
     isPass: true,
     isFail: false,
     isIOU: false,
-    isInquiry: false
+    // @ts-ignore
+    [$$inquirySymbol]: false
 });
 
 const Fail = <T>(x: Array<T> | T): FailMonad => ({
@@ -69,7 +77,11 @@ const Fail = <T>(x: Array<T> | T): FailMonad => ({
     concat: (o: PassFailMonad) =>
         o.fork((r: any) => Fail((x as Array<T>).concat(r)), null),
     ap: (y: PassFailMonad) => (y.isPass ? Fail(x) : y.concat(Fail(x))),
-    answer: (i: InquiryValue, n: string = '(anonymous)', c: Function = Inquiry) => {
+    answer: (
+        i: InquiryValue,
+        n: string = '(anonymous)',
+        c: Function = Inquiry
+    ) => {
         i.informant([n, Fail(x)]);
         return c({
             subject: i.subject,
@@ -83,11 +95,12 @@ const Fail = <T>(x: Array<T> | T): FailMonad => ({
     isPass: false,
     isFail: true,
     isIOU: false,
-    isInquiry: false
+    // @ts-ignore
+    [$$inquirySymbol]: false
 });
 
 const InquirySubject = (x: any | InquiryMonad): InquiryMonad =>
-    (x as any).isInquiry
+    (x as any)[$$inquirySymbol]
         ? x
         : Inquiry({
               subject: Maybe.of(x),
@@ -119,7 +132,7 @@ const Inquiry = (x: InquiryValue): InquiryMonad => ({
         const inquireResponse = f(x.subject.join());
         return inquireResponse.isFail ||
             inquireResponse.isPass ||
-            inquireResponse.isInquiry
+            inquireResponse[$$inquirySymbol]
             ? inquireResponse.answer(x, f.name, Inquiry)
             : Pass(inquireResponse).answer(x, f.name, Inquiry);
     },
@@ -132,7 +145,7 @@ const Inquiry = (x: InquiryValue): InquiryMonad => ({
                 // each return aggregates new contained value through exit
                 return inquireResponse.isFail ||
                     inquireResponse.isPass ||
-                    inquireResponse.isInquiry
+                    inquireResponse[$$inquirySymbol]
                     ? inquireResponse.answer(inq.join(), f.name, Inquiry)
                     : Pass(inquireResponse).answer(x, f.name, Inquiry);
             },
@@ -242,7 +255,8 @@ const Inquiry = (x: InquiryValue): InquiryMonad => ({
     // return a merged pass/fail
     zip: (f: Function): Array<any> => f(x.fail.join().concat(x.pass.join())), // return a concat of pass/fails
 
-    isInquiry: true
+    // @ts-ignore
+    [$$inquirySymbol]: true
 });
 
 const exportInquiry = {
@@ -251,7 +265,7 @@ const exportInquiry = {
 };
 
 const InquiryPSubject = (x: any | InquiryMonad): InquiryMonad =>
-    (x as any).isInquiry
+    (x as any)[$$inquirySymbol]
         ? x
         : InquiryP({
               subject: Maybe.of(x),
@@ -290,7 +304,7 @@ const InquiryP = (x: InquiryValue): InquiryMonad => ({
     inquire: (f: Function) => {
         const inquireResponse = f(x.subject.join());
         const syncronousResult = (response: any) =>
-            response.isFail || response.isPass || response.isInquiry
+            response.isFail || response.isPass || response[$$inquirySymbol]
                 ? response.answer(x, f.name, InquiryP)
                 : Pass(response).answer(x, f.name, InquiryP);
 
@@ -311,7 +325,9 @@ const InquiryP = (x: InquiryValue): InquiryMonad => ({
                 const inquireResponse = f(ii)(inq.join().subject.join());
 
                 const syncronousResult = (response: any) =>
-                    response.isFail || response.isPass || response.isInquiry
+                    response.isFail ||
+                    response.isPass ||
+                    response[$$inquirySymbol]
                         ? response.answer(inq.join(), f.name, InquiryP)
                         : Pass(response).answer(x, f.name, InquiryP);
 
@@ -404,7 +420,7 @@ const InquiryP = (x: InquiryValue): InquiryMonad => ({
     conclude: async (f: Function, g: Function): Promise<InquiryValue> =>
         Promise.all(x.iou.join())
             .then(buildInq(x))
-            .then(i => (i.isInquiry ? i.join() : i))
+            .then(i => (i[$$inquirySymbol] ? i.join() : i))
             .then(y => ({
                 subject: y.subject,
                 iou: y.iou,
@@ -417,7 +433,7 @@ const InquiryP = (x: InquiryValue): InquiryMonad => ({
     cleared: async (f: Function): Promise<InquiryMonad | Array<any>> =>
         Promise.all(x.iou.join())
             .then(buildInq(x))
-            .then(i => (i.isInquiry ? i.join() : i))
+            .then(i => (i[$$inquirySymbol] ? i.join() : i))
             .then(y => (y.fail.isEmpty() ? f(y.pass) : noop()))
             .catch(err => console.error('err', err)),
 
@@ -425,14 +441,14 @@ const InquiryP = (x: InquiryValue): InquiryMonad => ({
     faulted: async (f: Function): Promise<InquiryMonad | Array<any>> =>
         Promise.all(x.iou.join())
             .then(buildInq(x))
-            .then(i => (i.isInquiry ? i.join() : i))
+            .then(i => (i[$$inquirySymbol] ? i.join() : i))
             .then(y => (y.fail.isEmpty() ? noop() : f(y.fail))),
 
     // If any passes, handoff aggregated passes to supplied function; if no passes, return noop
     suffice: async (f: Function): Promise<InquiryMonad | Array<any>> =>
         Promise.all(x.iou.join())
             .then(buildInq(x))
-            .then(i => (i.isInquiry ? i.join() : i))
+            .then(i => (i[$$inquirySymbol] ? i.join() : i))
             .then(y => (y.pass.isEmpty() ? noop() : f(y.pass)))
             .catch(err => console.error('err', err)),
 
@@ -440,28 +456,28 @@ const InquiryP = (x: InquiryValue): InquiryMonad => ({
     scratch: async (f: Function): Promise<InquiryMonad | Array<any>> =>
         Promise.all(x.iou.join())
             .then(buildInq(x))
-            .then(i => (i.isInquiry ? i.join() : i))
+            .then(i => (i[$$inquirySymbol] ? i.join() : i))
             .then(y => (y.pass.isEmpty() ? f(y.fail) : noop())),
 
     // Take left function and hands off fails if any, otherwise takes right function and hands off passes to that function
     fork: async (f: Function, g: Function): Promise<Array<any>> =>
         Promise.all(x.iou.join())
             .then(buildInq(x))
-            .then(i => (i.isInquiry ? i.join() : i))
+            .then(i => (i[$$inquirySymbol] ? i.join() : i))
             .then(y => (y.fail.join().length ? f(y.fail) : g(y.pass))),
 
     // Take left function and hands off fails if any, otherwise takes right function and hands off passes to that function
     fold: async (f: Function, g: Function): Promise<Array<any>> =>
         Promise.all(x.iou.join())
             .then(buildInq(x))
-            .then(i => (i.isInquiry ? i.join() : i))
+            .then(i => (i[$$inquirySymbol] ? i.join() : i))
             .then(y => (y.pass.join().length ? f(y.pass) : g(y.fail))),
 
     // return a Promise containing a merged fail/pass resultset array
     zip: async (f: Function): Promise<Array<any>> =>
         Promise.all(x.iou.join())
             .then(buildInq(x))
-            .then(i => (i.isInquiry ? i.join() : i))
+            .then(i => (i[$$inquirySymbol] ? i.join() : i))
             .then(y => f(y.fail.join().concat(y.pass.join()))),
 
     // await all IOUs to resolve, then return a new Inquiry CONVERTS TO PROMISE!
@@ -476,11 +492,12 @@ const InquiryP = (x: InquiryValue): InquiryMonad => ({
             Promise.race([timeLimit, awaitPromises])
                 // @ts-ignore
                 .then(buildInq(x))
-                .then((i: any) => (i.isInquiry ? i.join() : i))
+                .then((i: any) => (i[$$inquirySymbol] ? i.join() : i))
                 .then((y: any) => InquiryPOf(y))
         );
     },
-    isInquiry: true
+    // @ts-ignore
+    [$$inquirySymbol]: true
 });
 
 const exportInquiryP = {
@@ -493,5 +510,6 @@ export {
     exportInquiryP as InquiryP,
     Fail,
     Pass,
-    IOU
+    IOU,
+    $$inquirySymbol
 };

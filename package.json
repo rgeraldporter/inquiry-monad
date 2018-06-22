@@ -1,6 +1,6 @@
 {
   "name": "inquiry-monad",
-  "version": "0.22.3",
+  "version": "0.23.0",
   "description": "A module for chaining testing functions and returning an aggregate of both passes and failures and the original value. Functional, much like an Either.",
   "main": "built/index.js",
   "scripts": {
@@ -36,7 +36,7 @@
     "@types/jest": "22.2.3",
     "@types/ramda": "0.25.24",
     "jest": "22.4.4",
-    "simple-maybe": "0.3.5",
+    "simple-maybe": "1.0.0",
     "ts-jest": "22.4.6",
     "typescript": "2.8.3"
   }
