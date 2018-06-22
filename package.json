@@ -1,9 +1,8 @@
 {
   "name": "inquiry-monad",
-  "version": "0.22.0",
+  "version": "0.22.1",
   "description": "A module for chaining testing functions and returning an aggregate of both passes and failures and the original value. Functional, much like an Either.",
   "main": "built/index.js",
-  "types" : "src/index.d.ts",
   "scripts": {
     "test": "jest",
     "build": "./node_modules/.bin/tsc",
