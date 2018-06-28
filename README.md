@@ -1,5 +1,4 @@
 # Inquiry
-### v0.23.0
 
 [![Build Status](https://travis-ci.com/rgeraldporter/inquiry-monad.svg?branch=master)](https://travis-ci.com/rgeraldporter/inquiry-monad)
 
@@ -79,6 +78,7 @@ npm install inquiry-monad-futures -S
 Some mini-projects will be included soon in this document to give practical examples of use. Where possible I will include links directly to a [Glitch](https://glitch.com) project so you may remix the code and play with the API.
 
  * [Birds Around Me](https://glitch.com/edit/#!/local-birds?path=server.js:70:1) - reads a user's GPS position, and retrieves birds reported to [eBird](https://ebird.org/) via eBird API. Inquiry is used to then answer a series of questions about the data.
+ * [Inquiry Weather Example](https://glitch.com/edit/#!/weather-checker?path=server.js:91:6) - reads the current weather forecast from Environment Canada for various places and answers some questions about results.
 
 ## Inquiry process types
 
