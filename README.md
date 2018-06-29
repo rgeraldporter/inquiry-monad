@@ -175,7 +175,7 @@ If you do not match the object strucutre, this constructor will fall back on con
 
 ### `.inquire(f)`
 
-Pass `inquire` a function `f` that returns either a `Pass`, `Fail`, `Promise` (`InquiryP` only), `Future` (`InquiryF` only), or another `Inquiry`. Anything other than these will be converted to a `Pass`.
+Pass `inquire` a function `f` that returns either a `Pass`, `Fail`, `Promise` (`InquiryP` only), `Future` (`InquiryF` only), or another `Inquiry`. Anything other than these will not be aggregated, and a warning will be output to the console.
 
 When another `Inquiry` is returned back, the `Pass` and `Fail` lists are concatenated into the parent Inquiry `Pass` and `Fail` lists. `Inquiry` can not have child Inquiries that are async-based, but `InquiryP` and `InquiryF` can have syncronous child Inquiries.
 

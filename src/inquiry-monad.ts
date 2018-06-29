@@ -41,12 +41,17 @@ export interface FailMonad extends PassFailMonad {
     isFail: true;
 }
 
+export interface QuestionsetMonad extends Monad {
+    find: Function;
+}
+
 export interface InquiryValue {
     subject: any;
     fail: FailMonad;
     pass: PassMonad;
     informant: Function;
     iou: IOUMonad;
+    questionset: QuestionsetMonad;
 }
 
 export interface InquiryMonad extends Monad {
@@ -66,6 +71,7 @@ export interface InquiryMonad extends Monad {
     milestone: Function;
     answer: Function;
     conclude: Function;
+    using: Function;
     await?: Function;
 }
 

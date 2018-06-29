@@ -1,4 +1,4 @@
-import { Inquiry, InquiryP, Fail, Pass, IOU } from './index';
+import { Inquiry, InquiryP, Fail, Pass, IOU, Questionset } from './index';
 import * as R from 'ramda';
 import { Maybe } from 'simple-maybe';
 import {
@@ -51,12 +51,14 @@ describe('The module', () => {
         // this is trickier to do with a typed monad, but not impossible
         // we cannot just do some simple math as the value much adhere to type Inquiry
         // but the law seems to be provable with objects as much as they are with numbers
+        // @ts-ignore
         const a: InquiryValue = {
             subject: Maybe.of(1),
             fail: Fail([]),
             pass: Pass([]),
             iou: IOU([]),
-            informant: (_: any) => _
+            informant: (_: any) => _,
+            questionset: Questionset.of([['', () => {}]])
         };
 
         const f = (n: InquiryValue): InquiryMonad =>
@@ -90,12 +92,14 @@ describe('The module', () => {
     });
 
     it('should satisfy the second monad law of right identity', () => {
+        // @ts-ignore
         const a: InquiryValue = {
             subject: Maybe.of(3),
             fail: Fail([]),
             pass: Pass([]),
             iou: IOU([]),
-            informant: (_: any) => _
+            informant: (_: any) => _,
+            questionset: Questionset.of([['', () => {}]])
         };
 
         const rightIdentity1 = Inquiry.of(a).chain(Inquiry.of);
@@ -106,12 +110,14 @@ describe('The module', () => {
     });
 
     it('should satisfy the third monad law of associativity', () => {
+        // @ts-ignore
         const a: InquiryValue = {
             subject: Maybe.of(30),
             fail: Fail([]),
             pass: Pass([]),
             iou: IOU([]),
-            informant: (_: any) => _
+            informant: (_: any) => _,
+            questionset: Questionset.of([['', () => {}]])
         };
 
         const g = (n: InquiryValue): InquiryMonad =>
@@ -464,5 +470,49 @@ describe('The module', () => {
                     'passed 10ms'
                 ]);
             });
+    });
+
+    it('can handle Questionsets', (done: Function) => {
+        const questionSet = Questionset.of([
+            [
+                'does it start with a capital letter?',
+                (a: string) =>
+                    /^[A-Z]/.test(a)
+                        ? Pass('starts with a capital')
+                        : Fail('does not start with a capital')
+            ],
+            [
+                'are there more than ten words?',
+                (a: string) =>
+                    a.split(' ').length > 10
+                        ? Pass('more than ten words')
+                        : Fail('ten words or less')
+            ],
+            [
+                /^are there any line breaks\?$/,
+                (a: string) =>
+                    /\r|\n/.exec(a)
+                        ? Pass('there were line breaks')
+                        : Fail('no line breaks')
+            ]
+        ]);
+
+        return Inquiry.subject('A short sentence.')
+            .using(questionSet)
+            .inquire('does it start with a capital letter?')
+            .inquire('are there more than ten words?')
+            .inquire('are there any line breaks?')
+            .conclude(
+                (fail: FailMonad) => {
+                    expect(fail.join()).toEqual([
+                        'ten words or less',
+                        'no line breaks'
+                    ]);
+                },
+                (pass: PassMonad) => {
+                    expect(pass.join()).toEqual(['starts with a capital']);
+                    setTimeout(done, 1);
+                }
+            );
     });
 });
