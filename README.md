@@ -27,7 +27,7 @@ Inquiry.subject(subjectData)
     .inquire(hasA)
     .inquire(validateB)
     .inquire(hasNoC)
-    .inquire(x => x.d ? Pass('is no d value') : Fail('has a d value')) // anonymous functions work as well
+    .inquire(x => (x.d ? Pass('is no d value') : Fail('has a d value'))) // anonymous functions work as well
     .join();
 
 // result: {subject: {a:1, b:false}, pass: Pass(['has a', 'b is valid', 'has no c value', 'has no d value']), fail: Fail([]), iou: IOU([])}
@@ -69,6 +69,7 @@ npm install inquiry-monad -S
 ```
 
 Optionally, if you are using [`fluture`](https://www.npmjs.com/package/fluture) or a compatible Futures library:
+
 ```bash
 npm install inquiry-monad-futures -S
 ```
@@ -77,24 +78,24 @@ npm install inquiry-monad-futures -S
 
 Some mini-projects will be included soon in this document to give practical examples of use. Where possible I will include links directly to a [Glitch](https://glitch.com) project so you may remix the code and play with the API.
 
- * [Birds Around Me](https://glitch.com/edit/#!/local-birds?path=server.js:70:1) - reads a user's GPS position, and retrieves birds reported to [eBird](https://ebird.org/) via eBird API. Inquiry is used to then answer a series of questions about the data.
- * [Inquiry Weather Example](https://glitch.com/edit/#!/weather-checker?path=server.js:91:6) - reads the current weather forecast from Environment Canada for various places and answers some questions about results.
+-   [Birds Around Me](https://glitch.com/edit/#!/local-birds?path=server.js:70:1) - reads a user's GPS position, and retrieves birds reported to [eBird](https://ebird.org/) via eBird API. Inquiry is used to then answer a series of questions about the data.
+-   [Inquiry Weather Example](https://glitch.com/edit/#!/weather-checker?path=server.js:91:6) - reads the current weather forecast from Environment Canada for various places and answers some questions about results.
 
 ## Inquiry process types
 
 There are three process types for Inquiry:
 
-* `Inquiry` (syncronous-only)
-* `InquiryP` (supports Promises)
-* `InquiryF` (supports Futures -- requires `inquiry-monad-futures` to be included)
+-   `Inquiry` (syncronous-only)
+-   `InquiryP` (supports Promises)
+-   `InquiryF` (supports Futures -- requires `inquiry-monad-futures` to be included)
 
 ## Inquiry result types
 
 There are three result types used in Inquiry:
 
-* `Pass`: a positive result
-* `Fail`: a negative result
-* `IOU`: a result to be determined later (relevant to `InquiryP` and `InquiryF` chains only)
+-   `Pass`: a positive result
+-   `Fail`: a negative result
+-   `IOU`: a result to be determined later (relevant to `InquiryP` and `InquiryF` chains only)
 
 Each of these types is a monad, and come with built-in methods for handling and exposing their data without mutating the values. See "Monad methods" below for details on how to handle results within these types.
 
@@ -102,10 +103,59 @@ Each of these types is a monad, and come with built-in methods for handling and 
 
 The subject uses `Maybe` to contain the value, which can result in one of two types of values:
 
-* `Just`: a non-null, non-undefined value
-* `Nothing`: an undefined or null value
+-   `Just`: a non-null, non-undefined value
+-   `Nothing`: an undefined or null value
 
 These are also monads, see "Monad methods" below for details on how to handle these types.
+
+## Questionset: an experimental API
+
+<details>
+  <summary>Experimental API: Click to read more</summary>
+
+_The following section is referring to an an experimental subset of the API introduced in version 0.24, and may change drastically or be removed in the future. Use at your peril, but feedback is VERY welcomed. Skip this section if you'd like to just start with more stable stuff._
+
+A newer, experimental implementation called `Questionset` is being tested currently that adds an API option that is not unlike that used in testing suites like Mocha and Chai, except that this implementation is designed to be used in actual production code, not in testing suites.
+
+`Questionset` is a collection of functions to be used in `inquire` calls. This allows you to write Inquiry calls with more descriptive language describing what question is being asked.
+
+```js
+const myQuestionset = Questionset.of([
+    [
+        'does it start with a capital letter?',
+        a =>
+            /^[A-Z]/.test(a)
+                ? Pass('starts with a capital')
+                : Fail('does not start with a capital')
+    ],
+    [
+        'are there more than ten words?',
+        a =>
+            a.split(' ').length > 10
+                ? Pass('more than ten words')
+                : Fail('ten words or less')
+    ],
+    [
+        /^are there any line breaks\?$/,
+        a =>
+            /\r|\n/.exec(a)
+                ? Pass('there were line breaks')
+                : Fail('no line breaks')
+    ]
+]);
+
+const results = Inquiry.subject('A short sentence.')
+    .using(myQuestionset)
+    .inquire('does it start with a capital letter?')
+    .inquire('are there more than ten words?')
+    // the below call will be skipped since no function has this identifier, but throw a console.warning
+    .inquire('does it start with an indefinite article?')
+    .inquire('are there any line breaks?');
+```
+
+</details>
+
+This API allows even greater observability over the process -- granting a result where all values and all functions are available for analysis.
 
 ## Use
 
@@ -123,11 +173,11 @@ Additionally, this gives the ability to contain Promises better, in a more funct
 
 For those who might wish to compare to a conventional `Either` (`Left`/`Right`) or `Validation` (`Failure`/`Success`) in functional programming, here are some advantages brought by using Inquiry:
 
-*   Inquiry aggregates **all** results, and does not eliminate positive results when a negative one is acquired
-*   Inquiry can run functions against both `Pass` and `Fail` lists
-*   Inquiry always retains the original subject rather than transforming it
-*   Inquiry is designed to be an expressive, easily understood API, to be learned with little or no previous functional programming experience requirement
-*   While Inquiry is opinionated and has many "`Fail`-first" methods, additional methods are provided that allow for a less opinionated usage
+-   Inquiry aggregates **all** results, and does not eliminate positive results when a negative one is acquired
+-   Inquiry can run functions against both `Pass` and `Fail` lists
+-   Inquiry always retains the original subject rather than transforming it
+-   Inquiry is designed to be an expressive, easily understood API, to be learned with little or no previous functional programming experience requirement
+-   While Inquiry is opinionated and has many "`Fail`-first" methods, additional methods are provided that allow for a less opinionated usage
 
 # Constructors
 
@@ -135,11 +185,11 @@ For those who might wish to compare to a conventional `Either` (`Left`/`Right`) 
 
 Returns a new `Inquiry` monad, which contains an object with properties `subject`, `pass`, `fail`, `iou`, and a single method, `informant`.
 
-* `subject`: the `value` that was passed to `Inquiry.subject`. This value is contained within a `Maybe` monad, meaning it will either be `Just(value)` or `Nothing()`.
-* `pass`: a `Pass` monad, containing an array of values
-* `fail`: a `Fail` monad, containing an array of values
-* `ious`: an `IOU` monad, containing an array of Promises or Futures (only relevant with `InquiryP` and `InquiryF`)
-* `informant`: a function to be called upon the return of a `.inquire` call, for observation/logging purposes (is set by calling `.informant` method)
+-   `subject`: the `value` that was passed to `Inquiry.subject`. This value is contained within a `Maybe` monad, meaning it will either be `Just(value)` or `Nothing()`.
+-   `pass`: a `Pass` monad, containing an array of values
+-   `fail`: a `Fail` monad, containing an array of values
+-   `ious`: an `IOU` monad, containing an array of Promises or Futures (only relevant with `InquiryP` and `InquiryF`)
+-   `informant`: a function to be called upon the return of a `.inquire` call, for observation/logging purposes (is set by calling `.informant` method)
 
 ## `InquiryP.subject(value)`
 
@@ -152,13 +202,12 @@ Also same, however it returns a monad called `InquiryF` which enables function `
 As a basic example:
 
 ```js
-const checkDb = x =>
-    Future.of(Pass('pretend I looked something up in a db'));
+const checkDb = x => Future.of(Pass('pretend I looked something up in a db'));
 
 const value = { something: true };
-    InquiryF.subject(value)
-        .inquire(checkDb)
-        .fork(console.error, console.log);
+InquiryF.subject(value)
+    .inquire(checkDb)
+    .fork(console.error, console.log);
 
 // console.log >> {subject: Just({something: true}), pass: Pass(['pretend I looked something up in a db']), fail: Fail([]), iou: IOU([]), informant: null};
 ```
@@ -212,12 +261,12 @@ const planets = [
 ];
 
 // curried, takes two parameters
-const startsWith = (word) => (checks) =>
+const startsWith = word => checks =>
     word.startsWith(checks.letter) ? Pass(word) : Fail(word);
 
 Inquiry.subject({ letter: 'M' })
     .inquireMap(startsWith, planets)
-    .suffice((pass) => {
+    .suffice(pass => {
         console.log(pass.join());
     });
 
@@ -263,6 +312,12 @@ console.log(result);
 // > Inquiry({subject: Just(5), pass: Pass(['Is greater than 1']), fail: Fail([]), iou: IOU([])});
 ```
 
+### `.using(Questionset)`
+
+Experimental.
+
+Given a `Questionset`, use these questions in `inquire` and `inquireMap` if using the string-based inquire method.
+
 ## Unwrap methods:
 
 The following methods are to be used as a means of "exiting" the Inquiry process chain.
@@ -290,7 +345,7 @@ const results = Inquiry.subject(5)
     .inquire(isMoreThanTen)
     .join();
 
-console.log(results)
+console.log(results);
 // > {subject: Just(5), pass: Pass(['Is greater than 1']), fail: Fail(['Is less than or equal to 10']), iou: IOU([]), informant: _ => _};
 ```
 
@@ -301,6 +356,7 @@ Passes the contained `Inquiry` object value into a function `f`. (You may option
 This is useful when you want to convert an Inquiry process chain into a Promise or a Future.
 
 Warning: In the case of `InquiryP`, you will want to use `await` first before using chain (see below), though that requires you to convert into a Promise (or Future).
+
 ```js
 const isMoreThanOne = x =>
     x > 1 ? Pass('Is greater than 1') : Fail('Is less than or equal to 1');
@@ -500,7 +556,8 @@ i.e., "Run the function if there are any fails thus far."
 
 **You must return the parameter passed to the function.**
 
-e.g. 
+e.g.
+
 ```js
     .breakpoint(x => {
         // do something
@@ -544,7 +601,8 @@ i.e., "Run the function if there are any passes thus far."
 
 **You must return the parameter passed to the function.**
 
-e.g. 
+e.g.
+
 ```js
     .milestone(x => {
         // do something
@@ -611,6 +669,7 @@ Inquiry.subject(5)
 Swap the `Pass` and `Fail` lists.
 
 This would be useful if you are using `Pass`/`Fail` as a proxy for a less opinionated concept that does not give weight to one side over another.
+
 ```js
 // @todo more practical example...
 const isMoreThanOne = x =>
@@ -638,7 +697,7 @@ const R = require('ramda');
 const passes = Pass([1, 2]);
 const fails = Fail([5, 10, 30]);
 const doublePasses = passes.map(R.multiply(2));
-const tripleFails = fails.map(R.multiply(3))
+const tripleFails = fails.map(R.multiply(3));
 
 console.log(doublePasses.inspect());
 // > Pass([2, 4])
@@ -651,7 +710,7 @@ const isEven = n => n % 2 === 0;
 const filterPass = inq => {
     inq.passes.map(R.filter(isEven)); // passes is inside a Pass monad, need to map it as well
     return inq; // must return with all properties intact (passes, fails, ious, etc)
-}
+};
 
 const result = Inquiry.subject('something')
     .inquire(passOne)
@@ -659,7 +718,7 @@ const result = Inquiry.subject('something')
     .map(filterPass)
     .join();
 
-console.log(result)
+console.log(result);
 // > { subject: Just('something), pass: Pass([2]), fail: Fail([]), iou: IOU([]), informant: _ => _}
 ```
 
@@ -700,7 +759,7 @@ Source is written in TypeScript. Run tests via `npm run test`.
 
 ## MIT License
 
-Copyright 2018 Robert Gerald Porter <rob@weeverapps.com>
+Copyright 2018 Robert Gerald Porter <mailto:rob@weeverapps.com>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
 

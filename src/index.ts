@@ -192,17 +192,32 @@ const Inquiry = (x: InquiryValue): InquiryMonad => ({
             : warnNotPassFail([inquireResponse, fnName]);
     },
 
-    inquireMap: (f: Function, i: Array<any>): InquiryMonad =>
+    inquireMap: (f: Function | string, i: Array<any>): InquiryMonad =>
         i.reduce(
             (inq, ii) => {
-                const inquireResponse = f(ii)(inq.join().subject.join());
+                const fIsFn = typeof f === 'function';
+                const inquire = fIsFn ? f : x.questionset.find(f);
+                const fnName = fIsFn ? (f as Function).name : f;
+
+                const warnNotPassFail = (resp: any) => {
+                    console.warn(
+                        'inquire was passed a function that does not return Pass or Fail:',
+                        fnName
+                    );
+                    console.warn('response was:', resp);
+                    return inq;
+                };
+                const inquireResponse =
+                    typeof inquire === 'function'
+                        ? inquire(ii)(inq.join().subject.join())
+                        : {};
 
                 // each return aggregates new contained value through exit
                 return inquireResponse.isFail ||
                     inquireResponse.isPass ||
                     inquireResponse[$$inquirySymbol]
-                    ? inquireResponse.answer(inq.join(), f.name, Inquiry)
-                    : Pass(inquireResponse).answer(x, f.name, Inquiry);
+                    ? inquireResponse.answer(inq.join(), fnName, Inquiry)
+                    : warnNotPassFail([inquireResponse, fnName]);
             },
 
             // initial Inquiry will be what is in `x` now
@@ -373,13 +388,27 @@ const buildInq = <T>(x: T) => (
 
 const InquiryP = (x: InquiryValue): InquiryMonad => ({
     // Inquire: core method
-    inquire: (f: Function) => {
-        // Function | string
-        const inquireResponse = f(x.subject.join());
+    inquire: (f: Function | string) => {
+        const fIsFn = typeof f === 'function';
+        const inquire = fIsFn ? f : x.questionset.find(f);
+        const fnName = fIsFn ? (f as Function).name : f;
+
+        const warnNotPassFail = (resp: any) => {
+            console.warn(
+                'inquire was passed a function that does not return Pass or Fail:',
+                fnName
+            );
+            console.warn('response was:', resp);
+            return Inquiry(x);
+        };
+
+        const inquireResponse =
+            typeof inquire === 'function' ? inquire(x.subject.join()) : {};
+
         const syncronousResult = (response: any) =>
             response.isFail || response.isPass || response[$$inquirySymbol]
-                ? response.answer(x, f.name, InquiryP)
-                : Pass(response).answer(x, f.name, InquiryP);
+                ? response.answer(x, fnName, InquiryP)
+                : warnNotPassFail([inquireResponse, fnName]);
 
         return inquireResponse.then
             ? InquiryP({
@@ -396,14 +425,29 @@ const InquiryP = (x: InquiryValue): InquiryMonad => ({
     inquireMap: (f: Function, i: Array<any>): InquiryMonad =>
         i.reduce(
             (inq, ii) => {
-                const inquireResponse = f(ii)(inq.join().subject.join());
+                const fIsFn = typeof f === 'function';
+                const inquire = fIsFn ? f : x.questionset.find(f);
+                const fnName = fIsFn ? (f as Function).name : f;
+
+                const warnNotPassFail = (resp: any) => {
+                    console.warn(
+                        'inquire was passed a function that does not return Pass or Fail:',
+                        fnName
+                    );
+                    console.warn('response was:', resp);
+                    return inq;
+                };
+                const inquireResponse =
+                    typeof inquire === 'function'
+                        ? inquire(ii)(inq.join().subject.join())
+                        : {};
 
                 const syncronousResult = (response: any) =>
                     response.isFail ||
                     response.isPass ||
                     response[$$inquirySymbol]
-                        ? response.answer(inq.join(), f.name, InquiryP)
-                        : Pass(response).answer(x, f.name, InquiryP);
+                        ? response.answer(inq.join(), fnName, InquiryP)
+                        : Pass(response).answer(x, fnName, InquiryP);
 
                 return inquireResponse.then
                     ? InquiryP({

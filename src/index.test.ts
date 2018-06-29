@@ -515,4 +515,71 @@ describe('The module', () => {
                 }
             );
     });
+
+    it('should be able to map a Questionset as an inquireMap', () => {
+        const planets = [
+            'Mercury',
+            'Venus',
+            'Earth',
+            'Mars',
+            'Jupiter',
+            'Saturn',
+            'Uranus',
+            'Neptune'
+        ];
+
+        const questionSet = Questionset.of([
+            [
+                'does it start with the letter provided?',
+                (word: string) => (checks: any) =>
+                    word.startsWith(checks.letter) ? Pass(word) : Fail(word)
+            ]
+        ]);
+
+        (Inquiry as any)
+            .subject({ letter: 'M' })
+            .using(questionSet)
+            .inquireMap('does it start with the letter provided?', planets)
+            .suffice((pass: PassFailMonad) => {
+                expect(pass.join()).toEqual(['Mercury', 'Mars']);
+            });
+    });
+
+    it('should be able to map a Questionset as an inquireMap with InquiryP', () => {
+        const planets = [
+            'Mercury',
+            'Venus',
+            'Earth',
+            'Mars',
+            'Jupiter',
+            'Saturn',
+            'Uranus',
+            'Neptune'
+        ];
+
+        const questionSet = Questionset.of([
+            [
+                'does it start with the letter provided?',
+                (word: string) => (checks: any) =>
+                    word.startsWith(checks.letter) ? Pass(word) : Fail(word)
+            ]
+        ]);
+
+        return (InquiryP as any)
+            .subject({ letter: 'M' })
+            .using(questionSet)
+            .inquire(resolveAfter1Second)
+            .inquire(resolveAfter10ms)
+            .inquireMap('does it start with the letter provided?', planets)
+            .inquire(resolveAfter10ms)
+            .suffice((pass: PassFailMonad) => {
+                expect(pass.join()).toEqual([
+                    'Mercury',
+                    'Mars',
+                    'passed',
+                    'passed 10ms',
+                    'passed 10ms'
+                ]);
+            });
+    });
 });
