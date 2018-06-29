@@ -153,9 +153,9 @@ const results = Inquiry.subject('A short sentence.')
     .inquire('are there any line breaks?');
 ```
 
-</details>
-
 This API allows even greater observability over the process -- granting a result where all values and all functions are available for analysis.
+
+</details>
 
 ## Use
 
