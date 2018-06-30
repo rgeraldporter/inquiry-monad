@@ -191,7 +191,8 @@ const InquiryOf = (x: InquiryValue) =>
     'fail' in x &&
     'pass' in x &&
     'iou' in x &&
-    'informant' in x
+    'informant' in x &&
+    'questionset' in x
         ? Inquiry(x)
         : warnTypeError(x);
 
@@ -416,7 +417,8 @@ const InquiryPOf = (x: InquiryValue) =>
     'fail' in x &&
     'pass' in x &&
     'iou' in x &&
-    'informant' in x
+    'informant' in x &&
+    'questionset' in x
         ? InquiryP(x)
         : warnTypeErrorP(x);
 
