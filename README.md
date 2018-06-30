@@ -108,12 +108,14 @@ The subject uses `Maybe` to contain the value, which can result in one of two ty
 
 These are also monads, see "Monad methods" below for details on how to handle these types.
 
-## Questionset: an experimental API
+## Question & Questionset : experimental APIs
 
 <details>
   <summary>Experimental API: Click to read more</summary>
 
 _The following section is referring to an an experimental subset of the API introduced in version 0.24, and may change drastically or be removed in the future. Use at your peril, but feedback is VERY welcomed. Skip this section if you'd like to just start with more stable stuff._
+
+### Questionset
 
 A newer, experimental implementation called `Questionset` is being tested currently that adds an API option that is not unlike that used in testing suites like Mocha and Chai, except that this implementation is designed to be used in actual production code, not in testing suites.
 
@@ -154,6 +156,41 @@ const results = Inquiry.subject('A short sentence.')
 ```
 
 This API allows even greater observability over the process -- granting a result where all values and all functions are available for analysis.
+
+### Question
+
+Another API you can use experimentally, is `Question`. This works much like `Questionset`, but with one function at a time.
+
+```js
+const subject = {
+    flagged: true,
+    score: 15,
+    started: 1530293458
+};
+
+const notFlagged = Question.of([
+    'is it not flagged?',
+    (x: any) =>
+        !x.flagged ? Pass('was not flagged') : Fail('was flagged')
+]);
+
+const passingScore = Question.of([
+    'is the score higher than 10?',
+    (x: any) =>
+        x.score > 10
+            ? Pass('Score higher than 10')
+            : Fail('Score not higher than 10')
+]);
+
+const results = return (InquiryP as any)
+    .subject(subject)
+    .inquire(notFlagged)
+    .inquire(passingScore);
+```
+
+Note that the descriptive string (e.g., `'is the score higher than 10?'`) is only used for documentation purposes, as well as for `.informant` output.
+
+`Question` has a strict API for construction, and helps validate you are using Inquiry correctly.
 
 </details>
 

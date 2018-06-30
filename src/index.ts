@@ -7,7 +7,8 @@ import {
     PassMonad,
     FailMonad,
     InquiryValue,
-    QuestionsetMonad
+    QuestionsetMonad,
+    QuestionMonad
 } from './inquiry-monad';
 
 const noop = () => {};
@@ -15,6 +16,7 @@ const noop = () => {};
 const $$inquirySymbol: unique symbol = Symbol();
 const $$questionsetSymbol: unique symbol = Symbol();
 const $$notFoundSymbol: unique symbol = Symbol();
+const $$questionSymbol: unique symbol = Symbol();
 
 const IOU = <T>(x: T | Array<T>): IOUMonad => ({
     map: (f: Function) => IOU(f(x)),
@@ -104,6 +106,31 @@ const Fail = <T>(x: Array<T> | T): FailMonad => ({
     [$$inquirySymbol]: false
 });
 
+const questionTypeError = (x: any) =>
+    console.error(
+        'Question must be passed parameters that adhere to the documented type. Value that was passed:',
+        x
+    );
+
+const Question = (x: Array<string | Function | RegExp>): QuestionMonad => ({
+    map: (f: Function) => Question(f(x)),
+    chain: (f: Function) => f(x),
+    ap: (y: Monad) => y.map(x),
+    inspect: () => <string>`Question(${x})`,
+    join: () => x,
+    call: (a: InquiryMonad) => (x[1] as Function)(a.join().subject.join()),
+    extract: () => x[1],
+    //@ts-ignore
+    [$$questionSymbol]: true
+});
+
+const QuestionOf = (x: Array<string | Function | RegExp>) =>
+    Array.isArray(x) ? Question(x) : questionTypeError(x);
+
+const exportQuestion = {
+    of: QuestionOf
+};
+
 const Questionset = (
     x: Array<Array<string | Function | RegExp>>
 ): QuestionsetMonad => ({
@@ -158,6 +185,7 @@ const warnTypeError = <T>(x: T) => {
     return InquirySubject(x);
 };
 
+// @todo validate constructor via Symbol
 const InquiryOf = (x: InquiryValue) =>
     'subject' in x &&
     'fail' in x &&
@@ -169,10 +197,14 @@ const InquiryOf = (x: InquiryValue) =>
 
 const Inquiry = (x: InquiryValue): InquiryMonad => ({
     // Inquire: core method
-    inquire: (f: Function | string) => {
-        const fIsFn = typeof f === 'function';
-        const inquire = fIsFn ? f : x.questionset.find(f);
-        const fnName = fIsFn ? (f as Function).name : f;
+    inquire: (f: Function | string | QuestionMonad) => {
+        const fExtractFn = (f as any)[$$questionSymbol]
+            ? (f as QuestionMonad).extract()
+            : f;
+
+        const fIsFn = typeof fExtractFn === 'function';
+        const inquire = fIsFn ? fExtractFn : x.questionset.find(fExtractFn);
+        const fnName = fIsFn ? (fExtractFn as Function).name : fExtractFn;
 
         const warnNotPassFail = (resp: any) => {
             console.warn(
@@ -192,12 +224,22 @@ const Inquiry = (x: InquiryValue): InquiryMonad => ({
             : warnNotPassFail([inquireResponse, fnName]);
     },
 
-    inquireMap: (f: Function | string, i: Array<any>): InquiryMonad =>
+    inquireMap: (
+        f: Function | string | QuestionMonad,
+        i: Array<any>
+    ): InquiryMonad =>
         i.reduce(
             (inq, ii) => {
-                const fIsFn = typeof f === 'function';
-                const inquire = fIsFn ? f : x.questionset.find(f);
-                const fnName = fIsFn ? (f as Function).name : f;
+                const fExtractFn = (f as any)[$$questionSymbol]
+                    ? (f as QuestionMonad).extract()
+                    : f;
+                const fIsFn = typeof fExtractFn === 'function';
+                const inquire = fIsFn
+                    ? fExtractFn
+                    : x.questionset.find(fExtractFn);
+                const fnName = fIsFn
+                    ? (fExtractFn as Function).name
+                    : fExtractFn;
 
                 const warnNotPassFail = (resp: any) => {
                     console.warn(
@@ -388,10 +430,13 @@ const buildInq = <T>(x: T) => (
 
 const InquiryP = (x: InquiryValue): InquiryMonad => ({
     // Inquire: core method
-    inquire: (f: Function | string) => {
-        const fIsFn = typeof f === 'function';
-        const inquire = fIsFn ? f : x.questionset.find(f);
-        const fnName = fIsFn ? (f as Function).name : f;
+    inquire: (f: Function | string | QuestionMonad) => {
+        const fExtractFn = (f as any)[$$questionSymbol]
+            ? (f as QuestionMonad).extract()
+            : f;
+        const fIsFn = typeof fExtractFn === 'function';
+        const inquire = fIsFn ? fExtractFn : x.questionset.find(fExtractFn);
+        const fnName = fIsFn ? (fExtractFn as Function).name : fExtractFn;
 
         const warnNotPassFail = (resp: any) => {
             console.warn(
@@ -422,12 +467,18 @@ const InquiryP = (x: InquiryValue): InquiryMonad => ({
             : syncronousResult(inquireResponse);
     },
 
-    inquireMap: (f: Function, i: Array<any>): InquiryMonad =>
+    inquireMap: (
+        f: Function | string | QuestionMonad,
+        i: Array<any>
+    ): InquiryMonad =>
         i.reduce(
             (inq, ii) => {
-                const fIsFn = typeof f === 'function';
-                const inquire = fIsFn ? f : x.questionset.find(f);
-                const fnName = fIsFn ? (f as Function).name : f;
+                const fExtractFn = (f as any)[$$questionSymbol]
+                    ? (f as QuestionMonad).extract()
+                    : f;
+                const fIsFn = typeof fExtractFn === 'function';
+                const inquire = fIsFn ? fExtractFn : x.questionset.find(fExtractFn);
+                const fnName = fIsFn ? (fExtractFn as Function).name : fExtractFn;
 
                 const warnNotPassFail = (resp: any) => {
                     console.warn(
@@ -644,6 +695,7 @@ export {
     exportInquiry as Inquiry,
     exportInquiryP as InquiryP,
     exportQuestionset as Questionset,
+    exportQuestion as Question,
     Fail,
     Pass,
     IOU,

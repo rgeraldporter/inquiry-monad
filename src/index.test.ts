@@ -1,4 +1,12 @@
-import { Inquiry, InquiryP, Fail, Pass, IOU, Questionset } from './index';
+import {
+    Inquiry,
+    InquiryP,
+    Fail,
+    Pass,
+    IOU,
+    Questionset,
+    Question
+} from './index';
 import * as R from 'ramda';
 import { Maybe } from 'simple-maybe';
 import {
@@ -581,5 +589,41 @@ describe('The module', () => {
                     'passed 10ms'
                 ]);
             });
+    });
+
+    it('should be able to handle Questions', (done: Function) => {
+        const subject = {
+            flagged: true,
+            score: 15,
+            started: 1530293458
+        };
+
+        const notFlagged = Question.of([
+            'is it not flagged?',
+            (x: any) =>
+                !x.flagged ? Pass('was not flagged') : Fail('was flagged')
+        ]);
+
+        const passingScore = Question.of([
+            'is the score higher than 10?',
+            (x: any) =>
+                x.score > 10
+                    ? Pass('Score higher than 10')
+                    : Fail('Score not higher than 10')
+        ]);
+
+        return (InquiryP as any)
+            .subject(subject)
+            .inquire(notFlagged)
+            .inquire(passingScore)
+            .conclude(
+                (fail: FailMonad) => {
+                    expect(fail.join()).toEqual(['was flagged']);
+                },
+                (pass: PassMonad) => {
+                    expect(pass.join()).toEqual(['Score higher than 10']);
+                    setTimeout(done, 1);
+                }
+            );
     });
 });

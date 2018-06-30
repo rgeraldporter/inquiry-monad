@@ -45,6 +45,11 @@ export interface QuestionsetMonad extends Monad {
     find: Function;
 }
 
+export interface QuestionMonad extends Monad {
+    call: Function;
+    extract: Function;
+}
+
 export interface InquiryValue {
     subject: any;
     fail: FailMonad;
