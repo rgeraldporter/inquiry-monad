@@ -575,7 +575,7 @@ describe('The module', () => {
 
         return (InquiryP as any)
             .subject({ letter: 'M' })
-            .using(questionSet)
+            .using(questionSet) // .using -- should this just mean check everything? why bother with .inquire?
             .inquire(resolveAfter1Second)
             .inquire(resolveAfter10ms)
             .inquireMap('does it start with the letter provided?', planets)

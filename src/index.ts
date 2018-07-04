@@ -1,4 +1,5 @@
 import { Maybe } from 'simple-maybe';
+
 import {
     Monad,
     InquiryMonad,
@@ -11,12 +12,18 @@ import {
     QuestionMonad
 } from './inquiry-monad';
 
+import {
+    $$inquirySymbol,
+    $$questionsetSymbol,
+    $$questionSymbol,
+    $$passSymbol,
+    $$failSymbol,
+    $$iouSymbol
+} from './symbols';
+
 const noop = () => {};
 
-const $$inquirySymbol: unique symbol = Symbol();
-const $$questionsetSymbol: unique symbol = Symbol();
 const $$notFoundSymbol: unique symbol = Symbol();
-const $$questionSymbol: unique symbol = Symbol();
 
 const IOU = <T>(x: T | Array<T>): IOUMonad => ({
     map: (f: Function) => IOU(f(x)),
@@ -29,11 +36,10 @@ const IOU = <T>(x: T | Array<T>): IOUMonad => ({
     head: () => (Array.isArray(x) && x.length ? x[0] : []),
     tail: () => (Array.isArray(x) && x.length ? x[x.length - 1] : []),
     isEmpty: () => Boolean(!Array.isArray(x) || x.length === 0),
-    // @ts-ignore no support yet for symbols as property names
     [$$inquirySymbol]: false,
-    isPass: false,
-    isFail: false,
-    isIOU: true
+    [$$passSymbol]: false,
+    [$$failSymbol]: false,
+    [$$iouSymbol]: true
 });
 
 const Pass = <T>(x: Array<T> | T): PassMonad => ({
@@ -47,7 +53,8 @@ const Pass = <T>(x: Array<T> | T): PassMonad => ({
     inspect: () => <string>`Pass(${x})`,
     concat: (o: PassFailMonad) =>
         o.fold((r: any) => Pass((x as Array<T>).concat(r)), null),
-    ap: (y: PassFailMonad) => (y.isPass ? y.concat(Pass(x)) : Pass(x)),
+    ap: <T>(y: PassFailMonad) =>
+        (y as any)[$$passSymbol] ? y.concat(Pass(x)) : Pass(x),
     answer: (
         i: InquiryValue,
         n: string = '(anonymous)',
@@ -64,10 +71,9 @@ const Pass = <T>(x: Array<T> | T): PassMonad => ({
         });
     },
     isEmpty: () => Boolean(!Array.isArray(x) || x.length === 0),
-    isPass: true,
-    isFail: false,
-    isIOU: false,
-    // @ts-ignore
+    [$$passSymbol]: true,
+    [$$failSymbol]: false,
+    [$$iouSymbol]: false,
     [$$inquirySymbol]: false
 });
 
@@ -82,7 +88,7 @@ const Fail = <T>(x: Array<T> | T): FailMonad => ({
     inspect: () => <string>`Fail(${x})`,
     concat: (o: PassFailMonad) =>
         o.fork((r: any) => Fail((x as Array<T>).concat(r)), null),
-    ap: (y: PassFailMonad) => (y.isPass ? Fail(x) : y.concat(Fail(x))),
+    ap: (y: PassFailMonad) => (y[$$passSymbol] ? Fail(x) : y.concat(Fail(x))),
     answer: (
         i: InquiryValue,
         n: string = '(anonymous)',
@@ -99,10 +105,9 @@ const Fail = <T>(x: Array<T> | T): FailMonad => ({
         });
     },
     isEmpty: () => Boolean(!Array.isArray(x) || x.length === 0),
-    isPass: false,
-    isFail: true,
-    isIOU: false,
-    // @ts-ignore
+    [$$passSymbol]: false,
+    [$$failSymbol]: true,
+    [$$iouSymbol]: false,
     [$$inquirySymbol]: false
 });
 
@@ -120,7 +125,6 @@ const Question = (x: Array<string | Function | RegExp>): QuestionMonad => ({
     join: () => x,
     call: (a: InquiryMonad) => (x[1] as Function)(a.join().subject.join()),
     extract: () => x[1],
-    //@ts-ignore
     [$$questionSymbol]: true
 });
 
@@ -149,7 +153,6 @@ const Questionset = (
                 console.warn('Question was not found: ', a);
                 return $$notFoundSymbol;
             }, (c: Function): Function => c),
-    // @ts-ignore
     [$$questionsetSymbol]: true
 });
 
@@ -186,6 +189,7 @@ const warnTypeError = <T>(x: T) => {
 };
 
 // @todo validate constructor via Symbol
+// @todo add receipts property
 const InquiryOf = (x: InquiryValue) =>
     'subject' in x &&
     'fail' in x &&
@@ -198,6 +202,8 @@ const InquiryOf = (x: InquiryValue) =>
 
 const Inquiry = (x: InquiryValue): InquiryMonad => ({
     // Inquire: core method
+    // You may pass a Function, a QuestionMonad (with a function), or a string which will look up
+    //  in the current Inquiry's questionset.
     inquire: (f: Function | string | QuestionMonad) => {
         const fExtractFn = (f as any)[$$questionSymbol]
             ? (f as QuestionMonad).extract()
@@ -218,8 +224,8 @@ const Inquiry = (x: InquiryValue): InquiryMonad => ({
         const inquireResponse =
             typeof inquire === 'function' ? inquire(x.subject.join()) : {};
 
-        return inquireResponse.isFail ||
-            inquireResponse.isPass ||
+        return inquireResponse[$$failSymbol] ||
+            inquireResponse[$$passSymbol] ||
             inquireResponse[$$inquirySymbol]
             ? inquireResponse.answer(x, fnName, Inquiry)
             : warnNotPassFail([inquireResponse, fnName]);
@@ -256,8 +262,8 @@ const Inquiry = (x: InquiryValue): InquiryMonad => ({
                         : {};
 
                 // each return aggregates new contained value through exit
-                return inquireResponse.isFail ||
-                    inquireResponse.isPass ||
+                return inquireResponse[$$failSymbol] ||
+                    inquireResponse[$$passSymbol] ||
                     inquireResponse[$$inquirySymbol]
                     ? inquireResponse.answer(inq.join(), fnName, Inquiry)
                     : warnNotPassFail([inquireResponse, fnName]);
@@ -384,7 +390,6 @@ const Inquiry = (x: InquiryValue): InquiryMonad => ({
     // return a merged pass/fail
     zip: (f: Function): Array<any> => f(x.fail.join().concat(x.pass.join())), // return a concat of pass/fails
 
-    // @ts-ignore
     [$$inquirySymbol]: true
 });
 
@@ -453,7 +458,9 @@ const InquiryP = (x: InquiryValue): InquiryMonad => ({
             typeof inquire === 'function' ? inquire(x.subject.join()) : {};
 
         const syncronousResult = (response: any) =>
-            response.isFail || response.isPass || response[$$inquirySymbol]
+            response[$$failSymbol] ||
+            response[$$passSymbol] ||
+            response[$$inquirySymbol]
                 ? response.answer(x, fnName, InquiryP)
                 : warnNotPassFail([inquireResponse, fnName]);
 
@@ -479,8 +486,12 @@ const InquiryP = (x: InquiryValue): InquiryMonad => ({
                     ? (f as QuestionMonad).extract()
                     : f;
                 const fIsFn = typeof fExtractFn === 'function';
-                const inquire = fIsFn ? fExtractFn : x.questionset.find(fExtractFn);
-                const fnName = fIsFn ? (fExtractFn as Function).name : fExtractFn;
+                const inquire = fIsFn
+                    ? fExtractFn
+                    : x.questionset.find(fExtractFn);
+                const fnName = fIsFn
+                    ? (fExtractFn as Function).name
+                    : fExtractFn;
 
                 const warnNotPassFail = (resp: any) => {
                     console.warn(
@@ -496,8 +507,8 @@ const InquiryP = (x: InquiryValue): InquiryMonad => ({
                         : {};
 
                 const syncronousResult = (response: any) =>
-                    response.isFail ||
-                    response.isPass ||
+                    response[$$failSymbol] ||
+                    response[$$passSymbol] ||
                     response[$$inquirySymbol]
                         ? response.answer(inq.join(), fnName, InquiryP)
                         : Pass(response).answer(x, fnName, InquiryP);
@@ -684,7 +695,6 @@ const InquiryP = (x: InquiryValue): InquiryMonad => ({
                 .then((y: any) => InquiryPOf(y))
         );
     },
-    // @ts-ignore
     [$$inquirySymbol]: true
 });
 
@@ -701,6 +711,5 @@ export {
     Fail,
     Pass,
     IOU,
-    $$inquirySymbol,
-    $$questionsetSymbol
+    $$inquirySymbol
 };

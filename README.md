@@ -208,7 +208,7 @@ Additionally, this gives the ability to contain Promises better, in a more funct
 
 ## Comparing to `Either` or `Validation`
 
-For those who might wish to compare to a conventional `Either` (`Left`/`Right`) or `Validation` (`Failure`/`Success`) in functional programming, here are some advantages brought by using Inquiry:
+For those who might wish to compare to a conventional `Either` (`Left`/`Right`) monad or `Validation` (`Failure`/`Success`)  applicative functor in functional programming, here are some advantages brought by using Inquiry:
 
 -   Inquiry aggregates **all** results, and does not eliminate positive results when a negative one is acquired
 -   Inquiry can run functions against both `Pass` and `Fail` lists

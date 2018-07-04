@@ -1,3 +1,12 @@
+import {
+    $$inquirySymbol,
+    $$questionsetSymbol,
+    $$questionSymbol,
+    $$passSymbol,
+    $$failSymbol,
+    $$iouSymbol
+} from './symbols';
+
 export interface Monad {
     map: Function;
     chain: Function;
@@ -10,14 +19,14 @@ export interface PassFailMonad extends Monad {
     fold: Function;
     fork: Function;
     concat: Function;
-    isPass: boolean;
-    isFail: boolean;
-    isInquiry: false;
-    isIOU: false;
     answer: Function;
     head: Function;
     tail: Function;
     isEmpty: Function;
+    [$$passSymbol]: Boolean;
+    [$$failSymbol]: Boolean;
+    [$$iouSymbol]: false;
+    [$$inquirySymbol]: false;
 }
 
 export interface IOUMonad extends Monad {
@@ -25,29 +34,31 @@ export interface IOUMonad extends Monad {
     head: Function;
     tail: Function;
     isEmpty: Function;
-    isIOU: true;
-    isInquiry: false;
-    isPass: false;
-    isFail: false;
+    [$$iouSymbol]: true;
+    [$$failSymbol]: false;
+    [$$inquirySymbol]: false;
+    [$$passSymbol]: false;
 }
 
 export interface PassMonad extends PassFailMonad {
-    isPass: true;
-    isFail: false;
+    [$$failSymbol]: false;
+    [$$passSymbol]: true;
 }
 
 export interface FailMonad extends PassFailMonad {
-    isPass: false;
-    isFail: true;
+    [$$passSymbol]: false;
+    [$$failSymbol]: true;
 }
 
 export interface QuestionsetMonad extends Monad {
     find: Function;
+    [$$questionsetSymbol]: true;
 }
 
 export interface QuestionMonad extends Monad {
     call: Function;
     extract: Function;
+    [$$questionSymbol]: true;
 }
 
 export interface InquiryValue {
@@ -78,6 +89,5 @@ export interface InquiryMonad extends Monad {
     conclude: Function;
     using: Function;
     await?: Function;
+    [$$inquirySymbol]: true;
 }
-
-// @todo add type for questions, a function that returns Pass or Fail
