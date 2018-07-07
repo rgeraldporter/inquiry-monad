@@ -9,7 +9,8 @@ import {
     FailMonad,
     InquiryValue,
     QuestionsetMonad,
-    QuestionMonad
+    QuestionMonad,
+    QuestionValue
 } from './inquiry-monad';
 
 import {
@@ -21,21 +22,22 @@ import {
     $$iouSymbol
 } from './symbols';
 
-const noop = () => {};
+const noop = (): void => {};
 
 const $$notFoundSymbol: unique symbol = Symbol();
 
 const IOU = <T>(x: T | Array<T>): IOUMonad => ({
-    map: (f: Function) => IOU(f(x)),
-    chain: (f: Function) => f(x),
-    ap: (y: Monad) => y.map(x),
-    inspect: () => <string>`IOU(${x})`,
-    join: () => x,
-    concat: (o: IOUMonad) =>
-        o.chain((r: any) => IOU((x as Array<T>).concat(r))),
-    head: () => (Array.isArray(x) && x.length ? x[0] : []),
-    tail: () => (Array.isArray(x) && x.length ? x[x.length - 1] : []),
-    isEmpty: () => Boolean(!Array.isArray(x) || x.length === 0),
+    map: (f: Function): IOUMonad => IOU(f(x)),
+    chain: (f: Function): any => f(x),
+    ap: (y: Monad): Monad => y.map(x),
+    inspect: (): string => `IOU(${x})`,
+    join: (): T | Array<T> => x,
+    concat: (o: IOUMonad): IOUMonad =>
+        o.chain((r: any): IOUMonad => IOU((x as Array<T>).concat(r))),
+    head: (): Array<T> | T => (Array.isArray(x) && x.length ? x[0] : []),
+    tail: (): Array<T> | T =>
+        Array.isArray(x) && x.length ? x[x.length - 1] : [],
+    isEmpty: (): Boolean => Boolean(!Array.isArray(x) || x.length === 0),
     [$$inquirySymbol]: false,
     [$$passSymbol]: false,
     [$$failSymbol]: false,
@@ -43,17 +45,18 @@ const IOU = <T>(x: T | Array<T>): IOUMonad => ({
 });
 
 const Pass = <T>(x: Array<T> | T): PassMonad => ({
-    map: (f: Function) => Pass(f(x)),
-    chain: (f: Function) => f(x),
-    fold: (f: Function, _: Function) => f(x),
-    fork: (_: Function, f: Function) => f(x),
-    head: () => (Array.isArray(x) && x.length ? x[0] : []),
-    tail: () => (Array.isArray(x) && x.length ? x[x.length - 1] : []),
-    join: () => x,
-    inspect: () => <string>`Pass(${x})`,
-    concat: (o: PassFailMonad) =>
-        o.fold((r: any) => Pass((x as Array<T>).concat(r)), null),
-    ap: <T>(y: PassFailMonad) =>
+    map: (f: Function): PassMonad => Pass(f(x)),
+    chain: (f: Function): any => f(x),
+    fold: (f: Function, _: Function): any => f(x),
+    fork: (_: Function, f: Function): any => f(x),
+    head: (): Array<T> | T => (Array.isArray(x) && x.length ? x[0] : []),
+    tail: (): Array<T> | T =>
+        Array.isArray(x) && x.length ? x[x.length - 1] : [],
+    join: (): Array<T> | T => x,
+    inspect: (): string => `Pass(${x})`,
+    concat: (o: PassFailMonad): PassFailMonad =>
+        o.fold((r: any): PassMonad => Pass((x as Array<T>).concat(r)), noop),
+    ap: (y: PassFailMonad): PassMonad =>
         (y as any)[$$passSymbol] ? y.concat(Pass(x)) : Pass(x),
     answer: (
         i: InquiryValue,
@@ -70,7 +73,7 @@ const Pass = <T>(x: Array<T> | T): PassMonad => ({
             questionset: i.questionset
         });
     },
-    isEmpty: () => Boolean(!Array.isArray(x) || x.length === 0),
+    isEmpty: (): Boolean => Boolean(!Array.isArray(x) || x.length === 0),
     [$$passSymbol]: true,
     [$$failSymbol]: false,
     [$$iouSymbol]: false,
@@ -78,17 +81,19 @@ const Pass = <T>(x: Array<T> | T): PassMonad => ({
 });
 
 const Fail = <T>(x: Array<T> | T): FailMonad => ({
-    map: (f: Function) => Fail(f(x)),
-    chain: (f: Function) => f(x),
-    fold: (_: Function, f: Function) => f(x),
-    fork: (f: Function, _: Function) => f(x),
-    head: () => (Array.isArray(x) && x.length ? x[0] : []),
-    tail: () => (Array.isArray(x) && x.length ? x[x.length - 1] : []),
-    join: () => x,
-    inspect: () => <string>`Fail(${x})`,
-    concat: (o: PassFailMonad) =>
-        o.fork((r: any) => Fail((x as Array<T>).concat(r)), null),
-    ap: (y: PassFailMonad) => (y[$$passSymbol] ? Fail(x) : y.concat(Fail(x))),
+    map: (f: Function): FailMonad => Fail(f(x)),
+    chain: (f: Function): any => f(x),
+    fold: (_: Function, f: Function): any => f(x),
+    fork: (f: Function, _: Function): any => f(x),
+    head: (): Array<T> | T => (Array.isArray(x) && x.length ? x[0] : []),
+    tail: (): Array<T> | T =>
+        Array.isArray(x) && x.length ? x[x.length - 1] : [],
+    join: (): Array<T> | T => x,
+    inspect: (): string => `Fail(${x})`,
+    concat: (o: PassFailMonad): PassFailMonad =>
+        o.fork((r: any): FailMonad => Fail((x as Array<T>).concat(r)), noop),
+    ap: (y: PassFailMonad): FailMonad =>
+        y[$$passSymbol] ? Fail(x) : y.concat(Fail(x)),
     answer: (
         i: InquiryValue,
         n: string = '(anonymous)',
@@ -104,51 +109,46 @@ const Fail = <T>(x: Array<T> | T): FailMonad => ({
             questionset: i.questionset
         });
     },
-    isEmpty: () => Boolean(!Array.isArray(x) || x.length === 0),
+    isEmpty: (): Boolean => Boolean(!Array.isArray(x) || x.length === 0),
     [$$passSymbol]: false,
     [$$failSymbol]: true,
     [$$iouSymbol]: false,
     [$$inquirySymbol]: false
 });
 
-const questionTypeError = (x: any) =>
+const questionTypeError = (x: any): void =>
     console.error(
         'Question must be passed parameters that adhere to the documented type. Value that was passed:',
         x
     );
 
-const Question = (x: Array<string | Function | RegExp>): QuestionMonad => ({
-    map: (f: Function) => Question(f(x)),
-    chain: (f: Function) => f(x),
-    ap: (y: Monad) => y.map(x),
-    inspect: () => <string>`Question(${x})`,
-    join: () => x,
-    call: (a: InquiryMonad) => (x[1] as Function)(a.join().subject.join()),
-    extract: () => x[1],
+const Question = (x: QuestionValue): QuestionMonad => ({
+    map: (f: Function): QuestionMonad => Question(f(x)),
+    chain: (f: Function): any => f(x),
+    ap: (y: Monad): Monad => y.map(x),
+    inspect: (): string => `Question(${x})`,
+    join: (): any => x,
+    call: (i: InquiryMonad): PassFailMonad => x[1](i.join().subject.join()),
+    extract: (): Function => x[1],
     [$$questionSymbol]: true
 });
 
-const QuestionOf = (x: Array<string | Function | RegExp>) =>
+const QuestionOf = (x: QuestionValue): QuestionMonad | void =>
     Array.isArray(x) ? Question(x) : questionTypeError(x);
 
 const exportQuestion = {
     of: QuestionOf
 };
 
-const Questionset = (
-    x: Array<Array<string | Function | RegExp>>
-): QuestionsetMonad => ({
-    map: (f: Function) => Questionset(f(x)),
-    chain: (f: Function) => f(x),
-    ap: (y: Monad) => y.map(x),
-    inspect: () => <string>`Questionset(${x})`,
-    join: () => x,
-    find: (a: string) =>
-        Maybe.of(x.find(i => RegExp(i[0] as string).test(a)))
-            .map(
-                (b: Array<string | Function | RegExp>): Function =>
-                    b[1] as Function
-            )
+const Questionset = (x: Array<QuestionValue>): QuestionsetMonad => ({
+    map: (f: Function): QuestionsetMonad => Questionset(f(x)),
+    chain: (f: Function): any => f(x),
+    ap: (y: Monad): Monad => y.map(x),
+    inspect: (): string => `Questionset(${x})`,
+    join: (): any => x,
+    find: (a: string): Monad =>
+        Maybe.of(x.find(i => RegExp(i[0]).test(a)))
+            .map((b: QuestionValue): Function => b[1])
             .fork((): symbol => {
                 console.warn('Question was not found: ', a);
                 return $$notFoundSymbol;
@@ -156,13 +156,13 @@ const Questionset = (
     [$$questionsetSymbol]: true
 });
 
-const questionsetTypeError = (x: any) =>
+const questionsetTypeError = (x: any): void =>
     console.error(
         'Questionset must be passed parameters that adhere to the documented type. Value that was passed:',
         x
     );
 
-const QuestionsetOf = (x: Array<Array<string | Function | RegExp>>) =>
+const QuestionsetOf = (x: Array<QuestionValue>): QuestionsetMonad | void =>
     Array.isArray(x) ? Questionset(x) : questionsetTypeError(x);
 
 const exportQuestionset = {
@@ -181,7 +181,7 @@ const InquirySubject = (x: any | InquiryMonad): InquiryMonad =>
               questionset: Questionset([['', noop]])
           });
 
-const warnTypeError = <T>(x: T) => {
+const warnTypeError = <T>(x: T): InquiryMonad => {
     console.warn(
         'Inquiry.of requires properties: subject, fail, pass, iou, informant. Converting to Inquiry.subject().'
     );
@@ -190,7 +190,7 @@ const warnTypeError = <T>(x: T) => {
 
 // @todo validate constructor via Symbol
 // @todo add receipts property
-const InquiryOf = (x: InquiryValue) =>
+const InquiryOf = (x: InquiryValue): InquiryMonad =>
     'subject' in x &&
     'fail' in x &&
     'pass' in x &&
@@ -204,7 +204,7 @@ const Inquiry = (x: InquiryValue): InquiryMonad => ({
     // Inquire: core method
     // You may pass a Function, a QuestionMonad (with a function), or a string which will look up
     //  in the current Inquiry's questionset.
-    inquire: (f: Function | string | QuestionMonad) => {
+    inquire: (f: Function | string | QuestionMonad): InquiryMonad => {
         const fExtractFn = (f as any)[$$questionSymbol]
             ? (f as QuestionMonad).extract()
             : f;
@@ -213,7 +213,7 @@ const Inquiry = (x: InquiryValue): InquiryMonad => ({
         const inquire = fIsFn ? fExtractFn : x.questionset.find(fExtractFn);
         const fnName = fIsFn ? (fExtractFn as Function).name : fExtractFn;
 
-        const warnNotPassFail = (resp: any) => {
+        const warnNotPassFail = (resp: any): InquiryMonad => {
             console.warn(
                 'inquire was passed a function that does not return Pass or Fail:',
                 fnName
@@ -248,7 +248,7 @@ const Inquiry = (x: InquiryValue): InquiryMonad => ({
                     ? (fExtractFn as Function).name
                     : fExtractFn;
 
-                const warnNotPassFail = (resp: any) => {
+                const warnNotPassFail = (resp: any): InquiryMonad => {
                     console.warn(
                         'inquire was passed a function that does not return Pass or Fail:',
                         fnName
@@ -291,7 +291,7 @@ const Inquiry = (x: InquiryValue): InquiryMonad => ({
         }),
 
     // Informant: for spying/logging/observable
-    informant: (f: Function) =>
+    informant: (f: Function): InquiryMonad =>
         Inquiry({
             subject: x.subject,
             iou: x.iou,
@@ -330,20 +330,20 @@ const Inquiry = (x: InquiryValue): InquiryMonad => ({
 
     // standard Monad methods
     map: (f: Function): InquiryMonad => InquirySubject(f(x)),
-    ap: (y: Monad) => y.map(x),
-    chain: (f: Function) => f(x),
+    ap: (y: Monad): Monad => y.map(x),
+    chain: (f: Function): any => f(x),
     join: (): InquiryValue => x,
 
     // execute the provided function if there are failures, else continue
-    breakpoint: (f: Function) =>
+    breakpoint: (f: Function): InquiryMonad =>
         x.fail.join().length ? Inquiry(f(x)) : Inquiry(x),
 
     // execute the provided function if there are passes, else continue
-    milestone: (f: Function) =>
+    milestone: (f: Function): InquiryMonad =>
         x.pass.join().length ? Inquiry(f(x)) : Inquiry(x),
 
     // internal method: execute informant, return new InquiryP() based on updated results
-    answer: (i: InquiryValue, n: string, _: Function) => {
+    answer: (i: InquiryValue, n: string, _: Function): InquiryMonad => {
         i.informant([n, Inquiry(x)]);
         return Inquiry({
             subject: i.subject,
@@ -368,23 +368,27 @@ const Inquiry = (x: InquiryValue): InquiryMonad => ({
     }),
 
     // If there are no fails, handoff aggregated passes to supplied function; if any fails, return noop
-    cleared: (f: Function) => (x.fail.isEmpty() ? f(x.pass) : noop()),
+    cleared: (f: Function): any | void =>
+        x.fail.isEmpty() ? f(x.pass) : noop(),
 
     // If there are fails, handoff aggregated fails to supplied function; if no fails, return noop
-    faulted: (f: Function) => (x.fail.isEmpty() ? noop() : f(x.fail)),
+    faulted: (f: Function): void | any =>
+        x.fail.isEmpty() ? noop() : f(x.fail),
 
     // If there are passes, handoff aggregated passes to supplied function; if no passes, return noop
-    suffice: (f: Function) => (x.pass.isEmpty() ? noop() : f(x.pass)),
+    suffice: (f: Function): void | any =>
+        x.pass.isEmpty() ? noop() : f(x.pass),
 
     // If there are no passes, handoff aggregated fails to supplied function; if any passes, return noop
-    scratch: (f: Function) => (x.pass.isEmpty() ? f(x.fail) : noop()),
+    scratch: (f: Function): any | void =>
+        x.pass.isEmpty() ? f(x.fail) : noop(),
 
     // unwrap left if any fails, right if not
-    fork: (f: Function, g: Function) =>
+    fork: (f: Function, g: Function): any =>
         x.fail.join().length ? f(x.fail) : g(x.pass),
 
     // unwrap left if any passes, right if not
-    fold: (f: Function, g: Function) =>
+    fold: (f: Function, g: Function): any =>
         x.pass.join().length ? f(x.pass) : g(x.fail),
 
     // return a merged pass/fail
@@ -410,14 +414,14 @@ const InquiryPSubject = (x: any | InquiryMonad): InquiryMonad =>
               questionset: Questionset([['', noop]])
           });
 
-const warnTypeErrorP = <T>(x: T) => {
+const warnTypeErrorP = <T>(x: T): InquiryMonad => {
     console.warn(
         'InquiryP.of requires properties: subject, fail, pass, iou, informant. Converting to InquiryP.subject().'
     );
     return InquiryPSubject(x);
 };
 
-const InquiryPOf = (x: InquiryValue) =>
+const InquiryPOf = (x: InquiryValue): InquiryMonad =>
     'subject' in x &&
     'fail' in x &&
     'pass' in x &&
@@ -429,7 +433,7 @@ const InquiryPOf = (x: InquiryValue) =>
 
 const buildInq = <T>(x: T) => (
     vals: Array<any> // @todo find a way to produce fn name
-) =>
+): InquiryMonad =>
     vals.reduce(
         (acc, cur) => cur.answer(acc, '(async fn)', InquiryP).join(),
         x
@@ -445,7 +449,7 @@ const InquiryP = (x: InquiryValue): InquiryMonad => ({
         const inquire = fIsFn ? fExtractFn : x.questionset.find(fExtractFn);
         const fnName = fIsFn ? (fExtractFn as Function).name : fExtractFn;
 
-        const warnNotPassFail = (resp: any) => {
+        const warnNotPassFail = (resp: any): InquiryMonad => {
             console.warn(
                 'inquire was passed a function that does not return Pass or Fail:',
                 fnName
@@ -457,7 +461,7 @@ const InquiryP = (x: InquiryValue): InquiryMonad => ({
         const inquireResponse =
             typeof inquire === 'function' ? inquire(x.subject.join()) : {};
 
-        const syncronousResult = (response: any) =>
+        const syncronousResult = (response: any): InquiryMonad =>
             response[$$failSymbol] ||
             response[$$passSymbol] ||
             response[$$inquirySymbol]
@@ -506,12 +510,12 @@ const InquiryP = (x: InquiryValue): InquiryMonad => ({
                         ? inquire(ii)(inq.join().subject.join())
                         : {};
 
-                const syncronousResult = (response: any) =>
+                const syncronousResult = (response: any): InquiryMonad =>
                     response[$$failSymbol] ||
                     response[$$passSymbol] ||
                     response[$$inquirySymbol]
                         ? response.answer(inq.join(), fnName, InquiryP)
-                        : Pass(response).answer(x, fnName, InquiryP);
+                        : Pass(response).answer(x, fnName, InquiryP); // @todo this should be warNotPassFail
 
                 return inquireResponse.then
                     ? InquiryP({
@@ -547,7 +551,7 @@ const InquiryP = (x: InquiryValue): InquiryMonad => ({
         }),
 
     // Informant: for spying/logging/observable
-    informant: (f: Function) =>
+    informant: (f: Function): InquiryMonad =>
         InquiryP({
             subject: x.subject,
             iou: x.iou,
@@ -586,17 +590,17 @@ const InquiryP = (x: InquiryValue): InquiryMonad => ({
 
     // Standard monad methods - note that while these work, remember that `x` is a typed Object
     map: (f: Function): InquiryMonad => InquiryPSubject(f(x)), // cast required for now
-    ap: (y: Monad) => y.map(x),
-    chain: (f: Function) => f(x),
+    ap: (y: Monad): Monad => y.map(x),
+    chain: (f: Function): any => f(x),
     join: (): InquiryValue => x,
 
     // execute the provided function if there are failures, else continue
-    breakpoint: (f: Function) =>
-        x.fail.join().length ? Inquiry(f(x)) : InquiryP(x),
+    breakpoint: (f: Function): InquiryMonad =>
+        x.fail.join().length ? InquiryP(f(x)) : InquiryP(x),
 
     // execute the provided function if there are passes, else continue
-    milestone: (f: Function) =>
-        x.pass.join().length ? Inquiry(f(x)) : InquiryP(x),
+    milestone: (f: Function): InquiryMonad =>
+        x.pass.join().length ? InquiryP(f(x)) : InquiryP(x),
 
     // internal method: execute informant, return new InquiryP() based on updated results
     answer: (i: InquiryValue, n: string, _: Function): InquiryMonad => {

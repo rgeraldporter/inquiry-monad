@@ -2,9 +2,7 @@
 
 [![Build Status](https://travis-ci.com/rgeraldporter/inquiry-monad.svg?branch=master)](https://travis-ci.com/rgeraldporter/inquiry-monad)
 
-Inquiry is a process flow that allows one ask multiple questions about a subject value. This process grants observability over all results, returning a collection of all successes, failures, and the original subject.
-
-Inquiry's API is comparible to Promise chains, and is designed to have an expressive, friendly API. It utilizes the concepts of functional programming, though experience with functional programming is not meant to be a requirement for ease of use. (To those experienced with functional programming, Inquiry can be compared with an `Either` or a `Validation`.)
+Inquiry is an API that allows one ask multiple questions about a subject value. This process grants observability over all results, returning a collection of all passes, fails, and the original subject value.
 
 ## Basic examples
 

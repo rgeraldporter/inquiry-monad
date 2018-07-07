@@ -91,3 +91,8 @@ export interface InquiryMonad extends Monad {
     await?: Function;
     [$$inquirySymbol]: true;
 }
+
+export interface QuestionValue extends Array<string | RegExp | Function> {
+    0: string | RegExp;
+    1: Function;
+}
