@@ -24,7 +24,7 @@ import {
 
 const noop = (): void => {};
 
-const $$notFoundSymbol: unique symbol = Symbol();
+const $$notFoundSymbol: unique symbol = Symbol('Not found');
 
 const IOU = <T>(x: T | Array<T>): IOUMonad => ({
     map: (f: Function): IOUMonad => IOU(f(x)),
@@ -278,6 +278,16 @@ const Inquiry = (x: InquiryValue): InquiryMonad => ({
                 informant: x.informant,
                 questionset: x.questionset
             })
+        ),
+
+    inquireAll: (): InquiryMonad =>
+        x.questionset.chain(
+            (questions: Array<QuestionValue>): InquiryMonad =>
+                questions.reduce(
+                    (inq: InquiryMonad, q: QuestionValue): InquiryMonad =>
+                        inq.inquire(QuestionOf(q)),
+                    Inquiry(x)
+                )
         ),
 
     using: (a: QuestionsetMonad): InquiryMonad =>
@@ -538,6 +548,16 @@ const InquiryP = (x: InquiryValue): InquiryMonad => ({
                 informant: x.informant,
                 questionset: x.questionset
             })
+        ),
+
+    inquireAll: (): InquiryMonad =>
+        x.questionset.chain(
+            (questions: Array<QuestionValue>): InquiryMonad =>
+                questions.reduce(
+                    (inq: InquiryMonad, q: QuestionValue): InquiryMonad =>
+                        inq.inquire(QuestionOf(q)),
+                    InquiryP(x)
+                )
         ),
 
     using: (a: QuestionsetMonad): InquiryMonad =>

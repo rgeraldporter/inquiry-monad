@@ -155,6 +155,8 @@ const results = Inquiry.subject('A short sentence.')
 
 This API allows even greater observability over the process -- granting a result where all values and all functions are available for analysis.
 
+You may also use `.inquireAll()` to run all questions in the questionset.
+
 ### Question
 
 Another API you can use experimentally, is `Question`. This works much like `Questionset`, but with one function at a time.
@@ -307,6 +309,9 @@ Inquiry.subject({ letter: 'M' })
 
 // > ["Mercury", "Mars"]
 ```
+### `.inquireAll()`
+
+Run all questions in the questionset already provided via `.using()`.
 
 ### `.informant(f)`
 

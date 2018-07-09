@@ -162,8 +162,11 @@ describe('The module', () => {
     });
 
     it('should be able to make many checks and run a fork', () => {
-        const result = (Inquiry as any)
-            .subject({ name: 'test', age: 14, description: 'blah' })
+        const result = Inquiry.subject({
+            name: 'test',
+            age: 14,
+            description: 'blah'
+        })
             .inquire(oldEnough)
             .inquire(findHeight)
             .inquire(nameSpelledRight)
@@ -184,8 +187,11 @@ describe('The module', () => {
     });
 
     it('should be able to make many checks and run a fold', () => {
-        const result = (Inquiry as any)
-            .subject({ name: 'test', age: 14, description: 'blah' })
+        const result = Inquiry.subject({
+            name: 'test',
+            age: 14,
+            description: 'blah'
+        })
             .inquire(oldEnough)
             .inquire(findHeight)
             .inquire(nameSpelledRight)
@@ -502,6 +508,10 @@ describe('The module', () => {
                     /\r|\n/.exec(a)
                         ? Pass('there were line breaks')
                         : Fail('no line breaks')
+            ],
+            [
+                'is this question ever asked?',
+                (a: string) => Fail('never should be asked')
             ]
         ]);
 
@@ -519,6 +529,163 @@ describe('The module', () => {
                 },
                 (pass: PassMonad) => {
                     expect(pass.join()).toEqual(['starts with a capital']);
+                    setTimeout(done, 1);
+                }
+            );
+    });
+
+    it('can handle Questionsets and do inquireAll', (done: Function) => {
+        const questionSet = Questionset.of([
+            [
+                'does it start with a capital letter?',
+                (a: string) =>
+                    /^[A-Z]/.test(a)
+                        ? Pass('starts with a capital')
+                        : Fail('does not start with a capital')
+            ],
+            [
+                'are there more than ten words?',
+                (a: string) =>
+                    a.split(' ').length > 10
+                        ? Pass('more than ten words')
+                        : Fail('ten words or less')
+            ],
+            [
+                /^are there any line breaks\?$/,
+                (a: string) =>
+                    /\r|\n/.exec(a)
+                        ? Pass('there were line breaks')
+                        : Fail('no line breaks')
+            ]
+        ]);
+
+        return Inquiry.subject('A short sentence.')
+            .using(questionSet)
+            .inquireAll()
+            .conclude(
+                (fail: FailMonad) => {
+                    expect(fail.join()).toEqual([
+                        'ten words or less',
+                        'no line breaks'
+                    ]);
+                },
+                (pass: PassMonad) => {
+                    expect(pass.join()).toEqual(['starts with a capital']);
+                    setTimeout(done, 1);
+                }
+            );
+    });
+
+    it('can handle Questionsets in async', (done: Function) => {
+        const questionSet = Questionset.of([
+            [
+                'does it start with a capital letter?',
+                (a: string) =>
+                    /^[A-Z]/.test(a)
+                        ? Pass('starts with a capital')
+                        : Fail('does not start with a capital')
+            ],
+            [
+                'are there more than ten words?',
+                (a: string) =>
+                    a.split(' ').length > 10
+                        ? Pass('more than ten words')
+                        : Fail('ten words or less')
+            ],
+            [
+                /^are there any line breaks\?$/,
+                (a: string) =>
+                    /\r|\n/.exec(a)
+                        ? Pass('there were line breaks')
+                        : Fail('no line breaks')
+            ],
+            [
+                'pause for a moment',
+                (a: string) =>
+                    new Promise(resolve => {
+                        setTimeout(() => {
+                            resolve(Pass('passed 15ms'));
+                        }, 15);
+                    })
+            ],
+            [
+                'is this question ever asked?',
+                (a: string) => Fail('never should be asked')
+            ]
+        ]);
+
+        return InquiryP.subject('A short sentence.')
+            .using(questionSet)
+            .inquire('does it start with a capital letter?')
+            .inquire('are there more than ten words?')
+            .inquire('are there any line breaks?')
+            .inquire('pause for a moment')
+            .conclude(
+                (fail: FailMonad) => {
+                    expect(fail.join()).toEqual([
+                        'ten words or less',
+                        'no line breaks'
+                    ]);
+                },
+                (pass: PassMonad) => {
+                    expect(pass.join()).toEqual([
+                        'starts with a capital',
+                        'passed 15ms'
+                    ]);
+                    setTimeout(done, 1);
+                }
+            );
+    });
+
+    it('can handle Questionsets and do inquireAll', (done: Function) => {
+        const questionSet = Questionset.of([
+            [
+                'does it start with a capital letter?',
+                (a: string) =>
+                    /^[A-Z]/.test(a)
+                        ? Pass('starts with a capital')
+                        : Fail('does not start with a capital')
+            ],
+            [
+                'are there more than ten words?',
+                (a: string) =>
+                    a.split(' ').length > 10
+                        ? Pass('more than ten words')
+                        : Fail('ten words or less')
+            ],
+            [
+                'pause for a moment',
+                (a: string) =>
+                    new Promise(resolve => {
+                        setTimeout(() => {
+                            resolve(Pass('passed 15ms'));
+                        }, 15);
+                    })
+            ],
+            [
+                /^are there any line breaks\?$/,
+                (a: string) =>
+                    /\r|\n/.exec(a)
+                        ? Pass('there were line breaks')
+                        : Fail('no line breaks')
+            ]
+        ]);
+
+        return InquiryP.subject('A short sentence.')
+            .using(questionSet)
+            .inquireAll()
+            .conclude(
+                (fail: FailMonad) => {
+                    expect(fail.join()).toEqual([
+                        'ten words or less',
+                        'no line breaks'
+                    ]);
+                },
+                (pass: PassMonad) => {
+                    expect(pass.join()).toEqual([
+                        'starts with a capital',
+                        'passed 15ms'
+                    ]);
                     setTimeout(done, 1);
                 }
             );
@@ -544,8 +711,7 @@ describe('The module', () => {
             ]
         ]);
 
-        (Inquiry as any)
-            .subject({ letter: 'M' })
+        Inquiry.subject({ letter: 'M' })
             .using(questionSet)
             .inquireMap('does it start with the letter provided?', planets)
             .suffice((pass: PassFailMonad) => {
@@ -573,8 +739,7 @@ describe('The module', () => {
             ]
         ]);
 
-        return (InquiryP as any)
-            .subject({ letter: 'M' })
+        return InquiryP.subject({ letter: 'M' })
             .using(questionSet) // .using -- should this just mean check everything? why bother with .inquire?
             .inquire(resolveAfter1Second)
             .inquire(resolveAfter10ms)
@@ -612,8 +777,7 @@ describe('The module', () => {
                     : Fail('Score not higher than 10')
         ]);
 
-        return (InquiryP as any)
-            .subject(subject)
+        return InquiryP.subject(subject)
             .inquire(notFlagged)
             .inquire(passingScore)
             .conclude(

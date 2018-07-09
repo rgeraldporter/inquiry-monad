@@ -73,6 +73,7 @@ export interface InquiryValue {
 export interface InquiryMonad extends Monad {
     inquire: Function;
     inquireMap: Function;
+    inquireAll: Function;
     zip: Function;
     swap: Function;
     fork: Function;
