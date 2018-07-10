@@ -4,7 +4,8 @@ import {
     $$questionSymbol,
     $$passSymbol,
     $$failSymbol,
-    $$iouSymbol
+    $$iouSymbol,
+    $$receiptSymbol
 } from './symbols';
 
 export interface Monad {
@@ -56,9 +57,26 @@ export interface QuestionsetMonad extends Monad {
 }
 
 export interface QuestionMonad extends Monad {
-    call: Function;
-    extract: Function;
+    call: (i: InquiryMonad) => PassFailMonad;
+    extract: () => QuestionValue[1];
+    name: () => QuestionValue[0];
     [$$questionSymbol]: true;
+}
+
+export interface ReceiptValue extends Array<string | RegExp | PassFailMonad> {
+    0: string | RegExp;
+    1: PassFailMonad;
+}
+
+export interface ReceiptMonad extends Monad {
+    [$$receiptSymbol]: true;
+    [$$inquirySymbol]: false;
+    concat: Function;
+    head: Function;
+    tail: Function;
+    isEmpty: Function;
+    fold: Function;
+    fork: Function;
 }
 
 export interface InquiryValue {
@@ -67,7 +85,8 @@ export interface InquiryValue {
     pass: PassMonad;
     informant: Function;
     iou: IOUMonad;
-    questionset: QuestionsetMonad;
+    questionset: QuestionsetMonad | void;
+    receipt: ReceiptMonad;
 }
 
 export interface InquiryMonad extends Monad {

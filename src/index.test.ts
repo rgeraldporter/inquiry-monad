@@ -5,6 +5,7 @@ import {
     Pass,
     IOU,
     Questionset,
+    Receipt,
     Question
 } from './index';
 import * as R from 'ramda';
@@ -13,6 +14,7 @@ import {
     Monad,
     InquiryMonad,
     IOUMonad,
+    ReceiptMonad,
     PassFailMonad,
     PassMonad,
     FailMonad,
@@ -59,14 +61,15 @@ describe('The module', () => {
         // this is trickier to do with a typed monad, but not impossible
         // we cannot just do some simple math as the value much adhere to type Inquiry
         // but the law seems to be provable with objects as much as they are with numbers
-        // @ts-ignore
+
         const a: InquiryValue = {
             subject: Maybe.of(1),
             fail: Fail([]),
             pass: Pass([]),
             iou: IOU([]),
             informant: (_: any) => _,
-            questionset: Questionset.of([['', () => {}]])
+            questionset: Questionset.of([['', () => {}]]),
+            receipt: Receipt([])
         };
 
         const f = (n: InquiryValue): InquiryMonad =>
@@ -76,7 +79,7 @@ describe('The module', () => {
                 })
             );
 
-        // 1. unit(x).chain(f) ==== f(x)
+        // 1. unit = Inquiry; unit(x).chain(f) ==== f(x);
         const leftIdentity1 = Inquiry.of(a).chain(f);
         const leftIdentity2 = f(a);
 
@@ -92,7 +95,7 @@ describe('The module', () => {
                 })
             );
 
-        // 1. Inquiry.of(x).chain(f) ==== f(x)
+        // 1. unit = Inquiry; unit(x).chain(f) ==== f(x);
         const leftIdentity3 = Inquiry.of(a).chain(g);
         const leftIdentity4 = g(a);
 
@@ -100,32 +103,32 @@ describe('The module', () => {
     });
 
     it('should satisfy the second monad law of right identity', () => {
-        // @ts-ignore
         const a: InquiryValue = {
             subject: Maybe.of(3),
             fail: Fail([]),
             pass: Pass([]),
             iou: IOU([]),
             informant: (_: any) => _,
-            questionset: Questionset.of([['', () => {}]])
+            questionset: Questionset.of([['', () => {}]]),
+            receipt: Receipt([])
         };
 
         const rightIdentity1 = Inquiry.of(a).chain(Inquiry.of);
         const rightIdentity2 = Inquiry.of(a);
 
-        // 2. m.chain(unit) ==== m
+        // 2. unit = Inquiry; m = Inquiry.of(a); m.chain(unit) ==== m;
         expect(rightIdentity1.join()).toEqual(rightIdentity2.join());
     });
 
     it('should satisfy the third monad law of associativity', () => {
-        // @ts-ignore
         const a: InquiryValue = {
             subject: Maybe.of(30),
             fail: Fail([]),
             pass: Pass([]),
             iou: IOU([]),
             informant: (_: any) => _,
-            questionset: Questionset.of([['', () => {}]])
+            questionset: Questionset.of([['', () => {}]]),
+            receipt: Receipt([])
         };
 
         const g = (n: InquiryValue): InquiryMonad =>
@@ -144,7 +147,7 @@ describe('The module', () => {
                 })
             );
 
-        // 3. m.chain(f).chain(g) ==== m.chain(x => f(x).chain(g))
+        // 3. m = Inquiry.of(a); m.chain(f).chain(g) ==== m.chain(x => f(x).chain(g))
         const associativity1 = Inquiry.of(a)
             .chain(g)
             .chain(f);
@@ -490,28 +493,28 @@ describe('The module', () => {
         const questionSet = Questionset.of([
             [
                 'does it start with a capital letter?',
-                (a: string) =>
+                (a: string): PassFailMonad =>
                     /^[A-Z]/.test(a)
                         ? Pass('starts with a capital')
                         : Fail('does not start with a capital')
             ],
             [
                 'are there more than ten words?',
-                (a: string) =>
+                (a: string): PassFailMonad =>
                     a.split(' ').length > 10
                         ? Pass('more than ten words')
                         : Fail('ten words or less')
             ],
             [
                 /^are there any line breaks\?$/,
-                (a: string) =>
+                (a: string): PassFailMonad =>
                     /\r|\n/.exec(a)
                         ? Pass('there were line breaks')
                         : Fail('no line breaks')
             ],
             [
                 'is this question ever asked?',
-                (a: string) => Fail('never should be asked')
+                (a: string): FailMonad => Fail('never should be asked')
             ]
         ]);
 
@@ -538,21 +541,21 @@ describe('The module', () => {
         const questionSet = Questionset.of([
             [
                 'does it start with a capital letter?',
-                (a: string) =>
+                (a: string): PassFailMonad =>
                     /^[A-Z]/.test(a)
                         ? Pass('starts with a capital')
                         : Fail('does not start with a capital')
             ],
             [
                 'are there more than ten words?',
-                (a: string) =>
+                (a: string): PassFailMonad =>
                     a.split(' ').length > 10
                         ? Pass('more than ten words')
                         : Fail('ten words or less')
             ],
             [
                 /^are there any line breaks\?$/,
-                (a: string) =>
+                (a: string): PassFailMonad =>
                     /\r|\n/.exec(a)
                         ? Pass('there were line breaks')
                         : Fail('no line breaks')
@@ -580,28 +583,28 @@ describe('The module', () => {
         const questionSet = Questionset.of([
             [
                 'does it start with a capital letter?',
-                (a: string) =>
+                (a: string): PassFailMonad =>
                     /^[A-Z]/.test(a)
                         ? Pass('starts with a capital')
                         : Fail('does not start with a capital')
             ],
             [
                 'are there more than ten words?',
-                (a: string) =>
+                (a: string): PassFailMonad =>
                     a.split(' ').length > 10
                         ? Pass('more than ten words')
                         : Fail('ten words or less')
             ],
             [
                 /^are there any line breaks\?$/,
-                (a: string) =>
+                (a: string): PassFailMonad =>
                     /\r|\n/.exec(a)
                         ? Pass('there were line breaks')
                         : Fail('no line breaks')
             ],
             [
                 'pause for a moment',
-                (a: string) =>
+                (a: string): Promise<PassFailMonad> =>
                     new Promise(resolve => {
                         setTimeout(() => {
                             resolve(Pass('passed 15ms'));
@@ -610,12 +613,15 @@ describe('The module', () => {
             ],
             [
                 'is this question ever asked?',
-                (a: string) => Fail('never should be asked')
+                (a: string): PassFailMonad => Fail('never should be asked')
             ]
         ]);
 
+        const usedQs: any[] = [];
+
         return InquiryP.subject('A short sentence.')
             .using(questionSet)
+            .informant(([n, x]: Array<any>) => usedQs.push([n, x]))
             .inquire('does it start with a capital letter?')
             .inquire('are there more than ten words?')
             .inquire('are there any line breaks?')
@@ -632,30 +638,53 @@ describe('The module', () => {
                         'starts with a capital',
                         'passed 15ms'
                     ]);
+
+                    // verify informant
+                    expect(usedQs[0][0]).toEqual('does it start with a capital letter?');
+                    expect(usedQs[0][1].inspect()).toEqual('Pass(starts with a capital)');
+
+                    expect(usedQs[1][0]).toEqual('are there more than ten words?');
+                    expect(usedQs[1][1].inspect()).toEqual('Fail(ten words or less)');
+
+                    expect(usedQs[2][0]).toEqual('are there any line breaks?');
+                    expect(usedQs[2][1].inspect()).toEqual('Fail(no line breaks)');
+
+                    expect(usedQs[3][0]).toEqual('pause for a moment');
+                    expect(usedQs[3][1].inspect()).toEqual('Pass(passed 15ms)');
                     setTimeout(done, 1);
                 }
-            );
+            )
+            .then((inq: InquiryValue) => {
+                expect(inq.receipt.join()[0][0]).toEqual('does it start with a capital letter?');
+                expect(inq.receipt.join()[0][1].inspect()).toEqual('Pass(starts with a capital)');
+                expect(inq.receipt.join()[1][0]).toEqual('are there more than ten words?');
+                expect(inq.receipt.join()[1][1].inspect()).toEqual('Fail(ten words or less)');
+                expect(inq.receipt.join()[2][0]).toEqual('are there any line breaks?');
+                expect(inq.receipt.join()[2][1].inspect()).toEqual('Fail(no line breaks)');
+                expect(inq.receipt.join()[3][0]).toEqual('pause for a moment');
+                expect(inq.receipt.join()[3][1].inspect()).toEqual('Pass(passed 15ms)');
+            });
     });
 
     it('can handle Questionsets and do inquireAll', (done: Function) => {
         const questionSet = Questionset.of([
             [
                 'does it start with a capital letter?',
-                (a: string) =>
+                (a: string): PassFailMonad =>
                     /^[A-Z]/.test(a)
                         ? Pass('starts with a capital')
                         : Fail('does not start with a capital')
             ],
             [
                 'are there more than ten words?',
-                (a: string) =>
+                (a: string): PassFailMonad =>
                     a.split(' ').length > 10
                         ? Pass('more than ten words')
                         : Fail('ten words or less')
             ],
             [
                 'pause for a moment',
-                (a: string) =>
+                (a: string): Promise<PassFailMonad> =>
                     new Promise(resolve => {
                         setTimeout(() => {
                             resolve(Pass('passed 15ms'));
@@ -706,7 +735,7 @@ describe('The module', () => {
         const questionSet = Questionset.of([
             [
                 'does it start with the letter provided?',
-                (word: string) => (checks: any) =>
+                (word: string): Function => (checks: any): PassFailMonad =>
                     word.startsWith(checks.letter) ? Pass(word) : Fail(word)
             ]
         ]);
@@ -714,7 +743,7 @@ describe('The module', () => {
         Inquiry.subject({ letter: 'M' })
             .using(questionSet)
             .inquireMap('does it start with the letter provided?', planets)
-            .suffice((pass: PassFailMonad) => {
+            .suffice((pass: PassMonad) => {
                 expect(pass.join()).toEqual(['Mercury', 'Mars']);
             });
     });
@@ -745,7 +774,7 @@ describe('The module', () => {
             .inquire(resolveAfter10ms)
             .inquireMap('does it start with the letter provided?', planets)
             .inquire(resolveAfter10ms)
-            .suffice((pass: PassFailMonad) => {
+            .suffice((pass: PassMonad) => {
                 expect(pass.join()).toEqual([
                     'Mercury',
                     'Mars',
@@ -765,13 +794,13 @@ describe('The module', () => {
 
         const notFlagged = Question.of([
             'is it not flagged?',
-            (x: any) =>
+            (x: any): PassFailMonad =>
                 !x.flagged ? Pass('was not flagged') : Fail('was flagged')
         ]);
 
         const passingScore = Question.of([
             'is the score higher than 10?',
-            (x: any) =>
+            (x: any): PassFailMonad =>
                 x.score > 10
                     ? Pass('Score higher than 10')
                     : Fail('Score not higher than 10')

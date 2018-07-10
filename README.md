@@ -106,10 +106,10 @@ The subject uses `Maybe` to contain the value, which can result in one of two ty
 
 These are also monads, see "Monad methods" below for details on how to handle these types.
 
-## Question & Questionset : experimental APIs
+## Question, Questionset & Receipt : experimental APIs
 
 <details>
-  <summary>Experimental API: Click to read more</summary>
+  <summary>Experimental APIs: Click to read more</summary>
 
 _The following section is referring to an an experimental subset of the API introduced in version 0.24, and may change drastically or be removed in the future. Use at your peril, but feedback is VERY welcomed. Skip this section if you'd like to just start with more stable stuff._
 
@@ -191,6 +191,14 @@ const results = return (InquiryP as any)
 Note that the descriptive string (e.g., `'is the score higher than 10?'`) is only used for documentation purposes, as well as for `.informant` output.
 
 `Question` has a strict API for construction, and helps validate you are using Inquiry correctly.
+
+### Receipt
+
+_Added in 0.28_
+
+This addition to the base value of any Inquiry keeps track of all questions and results.
+
+More will be build off of this in future releases.
 
 </details>
 
