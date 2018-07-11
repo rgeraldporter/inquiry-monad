@@ -824,5 +824,8 @@ export {
     Fail,
     Pass,
     IOU,
-    $$inquirySymbol
+    $$inquirySymbol,
+    $$questionSymbol,
+    $$passSymbol,
+    $$failSymbol
 };
