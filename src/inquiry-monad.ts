@@ -53,6 +53,7 @@ export interface FailMonad extends PassFailMonad {
 
 export interface QuestionsetMonad extends Monad {
     find: Function;
+    concat: Function;
     [$$questionsetSymbol]: true;
 }
 

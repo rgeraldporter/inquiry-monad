@@ -15,6 +15,7 @@ import {
     InquiryMonad,
     IOUMonad,
     ReceiptMonad,
+    QuestionsetMonad,
     PassFailMonad,
     PassMonad,
     FailMonad,
@@ -819,4 +820,36 @@ describe('The module', () => {
                 }
             );
     });
+
+    it('should be able to concatenate Questionsets', () => {
+        const q1 = Questionset.of([
+            [
+                'first question?',
+                (x: any) => Pass(1)
+            ],
+            [
+                'second question?',
+                (x: any) => Fail(2)
+            ]
+        ]);
+
+        const q2 = Questionset.of([
+            [
+                'third question?',
+                (x: any) => Pass(3)
+            ]
+        ]);
+
+        expect(
+            (q1 as QuestionsetMonad).concat(q2).join().length
+        ).toBe(3);
+
+        expect(
+            (q1 as QuestionsetMonad).concat(q2).join()[2][0]
+        ).toBe('third question?');
+
+        expect(
+            (q1 as QuestionsetMonad).concat(q2).join()[0][0]
+        ).toBe('first question?');
+    })
 });

@@ -77,7 +77,7 @@ const Pass = <T>(x: Array<T> | T): PassMonad => ({
             pass: i.pass.concat(Pass(x)),
             informant: i.informant,
             questionset: i.questionset,
-            receipt: i.receipt.concat(Receipt([ [n, Pass(x)] ]))
+            receipt: i.receipt.concat(Receipt([[n, Pass(x)]]))
         });
     },
     isEmpty: (): Boolean => Boolean(!Array.isArray(x) || x.length === 0),
@@ -175,6 +175,11 @@ const Questionset = (x: Array<QuestionValue>): QuestionsetMonad => ({
     ap: (y: Monad): Monad => y.map(x),
     inspect: (): string => `Questionset(${x})`,
     join: (): any => x,
+    concat: (o: QuestionsetMonad): QuestionsetMonad =>
+        o.chain(
+            (r: any): QuestionsetMonad =>
+                Questionset((x as Array<QuestionValue>).concat(r))
+        ),
     find: (a: string): Monad =>
         Maybe.of(x.find(i => RegExp(i[0]).test(a)))
             .map((b: QuestionValue): Function => b[1])
@@ -274,6 +279,12 @@ const Inquiry = (x: InquiryValue): InquiryMonad => ({
     ): InquiryMonad =>
         i.reduce(
             (inq, ii) => {
+                const extractName = (f: string | QuestionMonad) =>
+                    (f as QuestionMonad)[$$questionSymbol]
+                        ? (f as QuestionMonad).name()
+                        : f;
+                const fnName =
+                    typeof f === 'function' ? f.name || 'anon' : extractName(f);
                 const fExtractFn = (f as any)[$$questionSymbol]
                     ? (f as QuestionMonad).extract()
                     : f;
@@ -281,9 +292,6 @@ const Inquiry = (x: InquiryValue): InquiryMonad => ({
                 const inquire = fIsFn
                     ? fExtractFn
                     : (x.questionset as QuestionsetMonad).find(fExtractFn);
-                const fnName = fIsFn
-                    ? (fExtractFn as Function).name
-                    : fExtractFn;
 
                 const warnNotPassFail = (resp: any): InquiryMonad => {
                     console.warn(
@@ -562,6 +570,12 @@ const InquiryP = (x: InquiryValue): InquiryMonad => ({
     ): InquiryMonad =>
         i.reduce(
             (inq, ii) => {
+                const extractName = (f: string | QuestionMonad) =>
+                    (f as QuestionMonad)[$$questionSymbol]
+                        ? (f as QuestionMonad).name()
+                        : f;
+                const fnName =
+                    typeof f === 'function' ? f.name || 'anon' : extractName(f);
                 const fExtractFn = (f as any)[$$questionSymbol]
                     ? (f as QuestionMonad).extract()
                     : f;
@@ -569,9 +583,6 @@ const InquiryP = (x: InquiryValue): InquiryMonad => ({
                 const inquire = fIsFn
                     ? fExtractFn
                     : (x.questionset as QuestionsetMonad).find(fExtractFn);
-                const fnName = fIsFn
-                    ? (fExtractFn as Function).name
-                    : fExtractFn;
 
                 const warnNotPassFail = (resp: any) => {
                     console.warn(

@@ -2,35 +2,59 @@
 
 [![Build Status](https://travis-ci.com/rgeraldporter/inquiry-monad.svg?branch=master)](https://travis-ci.com/rgeraldporter/inquiry-monad)
 
-Inquiry is an API that allows one ask multiple questions about a subject value. This process grants observability over all results, returning a collection of all passes, fails, and the original subject value.
+Inquiry is an expressive API that allows one ask multiple questions about a subject value, and observe all results. This process returns a collection of all passes, fails, and the original subject value.
 
 ## Basic examples
 
 ```js
-const { Inquiry, InquiryP, Pass, Fail } = require('inquiry-monad');
+const {
+    Inquiry,
+    InquiryP,
+    Pass,
+    Fail,
+    Questionset,
+    Question
+} = require('inquiry-monad');
 
 const subjectData = {
     a: 1,
     b: false
 };
 
-/* "question" functions, which return Pass() or Fail() */
-const hasA = x => (x.a ? Pass('has a') : Fail('does not have a'));
-const validateB = x =>
-    x.b && typeof x.b === 'boolean' ? Pass('b is valid') : Fail('b is invalid');
-const hasNoC = x => (x.c ? Fail('has a c value') : Pass('has no c value'));
+const myQuestionset = Questionset.of([
+    ['does it have a?', x => (x.a ? Pass('has a') : Fail('does not have a'))],
+    [
+        'is b valid?',
+        x =>
+            x.b && typeof x.b === 'boolean'
+                ? Pass('b is valid')
+                : Fail('b is invalid')
+    ],
+    [
+        'is it missing the c value?',
+        x => (x.c ? Fail('has a c value') : Pass('has no c value'))
+    ]
+]);
 
 /* With all passes */
 Inquiry.subject(subjectData)
-    .inquire(hasA)
-    .inquire(validateB)
-    .inquire(hasNoC)
-    .inquire(x => (x.d ? Pass('is no d value') : Fail('has a d value'))) // anonymous functions work as well
+    .using(myQuestionset)
+    .inquire('does it have a?')
+    .inquire('is b valid?')
+    .inquire('is it missing the c value?')
+    .inquire(
+        // you can also make an inquiry as a one-off question
+        Question.of([
+            'is it missing the d value?',
+            x => (x.d ? Pass('is no d value') : Fail('has a d value'))
+        ])
+    )
     .join();
 
-// result: {subject: {a:1, b:false}, pass: Pass(['has a', 'b is valid', 'has no c value', 'has no d value']), fail: Fail([]), iou: IOU([])}
+// questionset & receipt have been abbreviated
+// result: {subject: {a:1, b:false}, pass: Pass(['has a', 'b is valid', 'has no c value', 'has no d value']), fail: Fail([]), iou: IOU([]), questionset: Questionset(...), receipt: Receipt(...)}
 
-/* With failures */
+/* subject with failures */
 const subjectDataWithFailure = {
     a: 1,
     b: 'string',
@@ -38,26 +62,34 @@ const subjectDataWithFailure = {
 };
 
 Inquiry.subject(subjectDataWithFailure)
-    .inquire(hasA)
-    .inquire(validateB)
-    .inquire(hasNoC)
+    .using(myQuestionset)
+    .inquireAll()
     .join();
 
-// result: {subject: {a:1, b:'string', c:true}, pass: Pass(['has a']), fail: Fail(['b is invalid', 'has c value']), iou: IOU()}
+// result: {subject: {a:1, b:'string', c:true}, pass: Pass(['has a']), fail: Fail(['b is invalid', 'has c value']), iou: IOU(), questionset: Questionset(...), receipt: Receipt(...)}
 
-/* With async Promises */
+/* With async (Promises) */
 const checkDb = async x =>
     Promise.resolve(Pass('pretend I looked something up in a db'));
 
-InquiryP.subject(subjectDataWithFailure)
-    .inquire(checkDb)
-    .inquire(hasA)
-    .inquire(validateB)
-    .inquire(hasNoC)
-    .conclude(x => x, y => y);
-// .conclude or another "unwrap" fn is necessary to complete "IOUs" to give a clean exit (resolve all unresolved Promises)
+// we can use .concat to merge two Questionsets
+const myAsyncQuestionset = myQuestionset.concat(
+    Questionset.of([
+        [
+            'look something up in a db',
+            async x =>
+                Promise.resolve(Pass('pretend I looked something up in a db'))
+        ]
+    ])
+);
 
-// result: Promise.resolve(result: {subject: {a:1, b:'string', c:true}, pass: Pass(['has a', 'pretend I looked something up in a db']), fail: Fail(['b is invalid', 'has c value']), iou: IOU()})
+InquiryP.subject(subjectDataWithFailure)
+    .using(myQuestionset)
+    .inquireAll()
+    .conclude(x => x, y => y);
+// .conclude or another "unwrap" function is necessary to complete "IOUs" to give a clean exit (i.e., resolve all unresolved Promises)
+
+// result: Promise.resolve(result: {subject: {a:1, b:'string', c:true}, pass: Pass(['has a', 'pretend I looked something up in a db']), fail: Fail(['b is invalid', 'has c value']), iou: IOU()}, questionset: Questionset(...), receipt: Receipt(...))
 ```
 
 ## Get started
@@ -79,9 +111,9 @@ Some mini-projects will be included soon in this document to give practical exam
 -   [Birds Around Me](https://glitch.com/edit/#!/local-birds?path=server.js:70:1) - reads a user's GPS position, and retrieves birds reported to [eBird](https://ebird.org/) via eBird API. Inquiry is used to then answer a series of questions about the data.
 -   [Inquiry Weather Example](https://glitch.com/edit/#!/weather-checker?path=server.js:91:6) - reads the current weather forecast from Environment Canada for various places and answers some questions about results.
 
-## Inquiry process types
+## Inquiry types
 
-There are three process types for Inquiry:
+There are three types of Inquiry:
 
 -   `Inquiry` (syncronous-only)
 -   `InquiryP` (supports Promises)
@@ -93,9 +125,9 @@ There are three result types used in Inquiry:
 
 -   `Pass`: a positive result
 -   `Fail`: a negative result
--   `IOU`: a result to be determined later (relevant to `InquiryP` and `InquiryF` chains only)
+-   `IOU`: a result to be determined later (relevant to `InquiryP` and `InquiryF` types only)
 
-Each of these types is a monad, and come with built-in methods for handling and exposing their data without mutating the values. See "Monad methods" below for details on how to handle results within these types.
+Each of these result types is a monad, and come with built-in methods for handling and exposing their data without mutating the values. See "Monad methods" below for details on how to handle results within these types.
 
 ## Inquiry subject type
 
@@ -106,18 +138,35 @@ The subject uses `Maybe` to contain the value, which can result in one of two ty
 
 These are also monads, see "Monad methods" below for details on how to handle these types.
 
-## Question, Questionset & Receipt : experimental APIs
+## Use
 
-<details>
-  <summary>Experimental APIs: Click to read more</summary>
+_Note that unless otherwise stated in this document, `Inquiry`, `InquiryP`, and `InquiryF` are interchangeable, and mostly share the same API._
 
-_The following section is referring to an an experimental subset of the API introduced in version 0.24, and may change drastically or be removed in the future. Use at your peril, but feedback is VERY welcomed. Skip this section if you'd like to just start with more stable stuff._
+Inquiry can take any _subject_ and test it against various question functions via the `.inquire` method. The question functions should return `Pass` or `Fail` values.
+
+The result is a collection containing a list of result types for `Fail`, `Pass`, and `IOU`, in addition to the original `subject`.
+
+The advantage over a Promise chain is that the original subject and each individual function return is retained through the chain of `.inquire` calls, giving observability over the chain.
+
+Additionally, this gives the ability to contain Promises better, in a more functional-friendly style.
+
+## Comparing to `Either` or `Validation`
+
+For those who might wish to compare to a conventional `Either` (`Left`/`Right`) monad or `Validation` (`Failure`/`Success`) applicative functor in functional programming, here are some advantages brought by using Inquiry:
+
+-   Inquiry aggregates **all** results, and does not eliminate positive results when a negative one is acquired
+-   Inquiry can run functions against both `Pass` and `Fail` lists
+-   Inquiry always retains the original subject rather than transforming it
+-   Inquiry is designed to be an expressive, easily understood API, to be learned with little or no previous functional programming experience requirement
+-   While Inquiry is opinionated and has many "`Fail`-first" methods, additional methods are provided that allow for a less opinionated usage
+
+# Question, Questionset & Receipt
 
 ### Questionset
 
-A newer, experimental implementation called `Questionset` is being tested currently that adds an API option that is not unlike that used in testing suites like Mocha and Chai, except that this implementation is designed to be used in actual production code, not in testing suites.
+`Questionset` is an API for providing `inquire` functions that are not unlike the API used in testing suites like Mocha or Chai, except that this implementation is designed to be used in non-software-testing contexts.
 
-`Questionset` is a collection of functions to be used in `inquire` calls. This allows you to write Inquiry calls with more descriptive language describing what question is being asked.
+This allows you to write Inquiry calls with descriptive and expressive language that can be very clear about what questions are being asked about the subject data.
 
 ```js
 const myQuestionset = Questionset.of([
@@ -148,18 +197,16 @@ const results = Inquiry.subject('A short sentence.')
     .using(myQuestionset)
     .inquire('does it start with a capital letter?')
     .inquire('are there more than ten words?')
-    // the below call will be skipped since no function has this identifier, but throw a console.warning
+    // the below call will be skipped since no function has this identifier, and will throw a console.warning()
     .inquire('does it start with an indefinite article?')
     .inquire('are there any line breaks?');
 ```
 
-This API allows even greater observability over the process -- granting a result where all values and all functions are available for analysis.
-
-You may also use `.inquireAll()` to run all questions in the questionset.
+You may also use `.inquireAll()` to use all questions in the questionset.
 
 ### Question
 
-Another API you can use experimentally, is `Question`. This works much like `Questionset`, but with one function at a time.
+Another API you can use is `Question`. This works much like `Questionset`, but with one question at a time.
 
 ```js
 const subject = {
@@ -170,61 +217,44 @@ const subject = {
 
 const notFlagged = Question.of([
     'is it not flagged?',
-    (x: any) =>
-        !x.flagged ? Pass('was not flagged') : Fail('was flagged')
+    x => (!x.flagged ? Pass('was not flagged') : Fail('was flagged'))
 ]);
 
 const passingScore = Question.of([
     'is the score higher than 10?',
-    (x: any) =>
+    x =>
         x.score > 10
             ? Pass('Score higher than 10')
             : Fail('Score not higher than 10')
 ]);
 
-const results = return (InquiryP as any)
-    .subject(subject)
+const results = InquiryP.subject(subject)
     .inquire(notFlagged)
     .inquire(passingScore);
 ```
 
-Note that the descriptive string (e.g., `'is the score higher than 10?'`) is only used for documentation purposes, as well as for `.informant` output.
-
-`Question` has a strict API for construction, and helps validate you are using Inquiry correctly.
+Note that the descriptive string (e.g., `'is the score higher than 10?'`) in this case is used for `.informant` and `.receipt` output, as well as documentation purposes.
 
 ### Receipt
 
 _Added in 0.28_
 
-This addition to the base value of any Inquiry keeps track of all questions and results.
+This property of Inquiry keeps track of all questions and results in a similar format to Questions:
 
-More will be build off of this in future releases.
+```js
+// take the above example...
 
-</details>
+const results = InquiryP.subject(subject)
+    .inquire(notFlagged)
+    .inquire(passingScore);
 
-## Use
+console.log(results.join().receipt.inspect());
+// > Receipt(['is it not flagged?', Fail(was flagged)], ['is the score higher than 10?', Pass(score higher than 10)])
+```
 
-_Note that unless otherwise stated in this document, `Inquiry`, `InquiryP`, and `InquiryF` are interchangeable, and mostly share the same API._
+More functionality and options will be built off of this new API in future releases.
 
-Inquiry can take any _subject_ and test it against various question functions via the `.inquire` method. The question functions should return `Pass` or `Fail` values.
-
-The result is a collection containing a list of result types for `Fail`, `Pass`, and `IOU`, in addition to the original `subject`.
-
-The advantage over a Promise chain is that the original subject and each individual function return is retained through the chain of `.inquire` calls, giving observability over the chain.
-
-Additionally, this gives the ability to contain Promises better, in a more functional-friendly style.
-
-## Comparing to `Either` or `Validation`
-
-For those who might wish to compare to a conventional `Either` (`Left`/`Right`) monad or `Validation` (`Failure`/`Success`)  applicative functor in functional programming, here are some advantages brought by using Inquiry:
-
--   Inquiry aggregates **all** results, and does not eliminate positive results when a negative one is acquired
--   Inquiry can run functions against both `Pass` and `Fail` lists
--   Inquiry always retains the original subject rather than transforming it
--   Inquiry is designed to be an expressive, easily understood API, to be learned with little or no previous functional programming experience requirement
--   While Inquiry is opinionated and has many "`Fail`-first" methods, additional methods are provided that allow for a less opinionated usage
-
-# Constructors
+# `Inquiry` Constructors
 
 ## `Inquiry.subject(value)`
 
@@ -247,14 +277,17 @@ Also same, however it returns a monad called `InquiryF` which enables function `
 As a basic example:
 
 ```js
-const checkDb = x => Future.of(Pass('pretend I looked something up in a db'));
+const checkDb = Question.of(
+    'look up something in a db?',
+    x => Future.of(Pass('pretend I looked something up in a db')
+);
 
 const value = { something: true };
 InquiryF.subject(value)
     .inquire(checkDb)
     .fork(console.error, console.log);
 
-// console.log >> {subject: Just({something: true}), pass: Pass(['pretend I looked something up in a db']), fail: Fail([]), iou: IOU([]), informant: null};
+// console.log >> {subject: Just({something: true}), pass: Pass(['pretend I looked something up in a db']), fail: Fail([]), iou: IOU([]), informant: null, questionset: Questionset(...), receipt: Receipt(...)};
 ```
 
 ## `Inquiry.of(inquiry)`
@@ -274,15 +307,18 @@ Pass `inquire` a function `f` that returns either a `Pass`, `Fail`, `Promise` (`
 When another `Inquiry` is returned back, the `Pass` and `Fail` lists are concatenated into the parent Inquiry `Pass` and `Fail` lists. `Inquiry` can not have child Inquiries that are async-based, but `InquiryP` and `InquiryF` can have syncronous child Inquiries.
 
 ```js
-const isMoreThanOne = x =>
-    x > 1 ? Pass('Is greater than 1') : Fail('Is less than or equal to 1');
+const isMoreThanOne = Question.of([
+    'is it greater than 1?',
+    x =>
+        x > 1 ? Pass('Is greater than 1') : Fail('Is less than or equal to 1')
+]);
 
 const result = Inquiry.subject(5)
     .inquire(isMoreThanOne)
     .join();
 
 console.log(result);
-// > {subject: Just(5), pass: Pass(['Is greater than 1']), fail: Fail([]), iou: IOU([]), informant: _ => _};
+// > {subject: Just(5), pass: Pass(['Is greater than 1']), fail: Fail([]), iou: IOU([]), informant: _ => _, questionset: Questionset(...), receipt: Receipt(...)};
 ```
 
 ### `.inquireMap(f, i)`
@@ -305,9 +341,12 @@ const planets = [
     'Neptune'
 ];
 
-// curried, takes two parameters
-const startsWith = word => checks =>
-    word.startsWith(checks.letter) ? Pass(word) : Fail(word);
+// needs to be a function returning a Question
+const startsWith = word =>
+    Question.of([
+        'does the word start with the provided letter?',
+        checks => (word.startsWith(checks.letter) ? Pass(word) : Fail(word))
+    ]);
 
 Inquiry.subject({ letter: 'M' })
     .inquireMap(startsWith, planets)
@@ -317,6 +356,7 @@ Inquiry.subject({ letter: 'M' })
 
 // > ["Mercury", "Mars"]
 ```
+
 ### `.inquireAll()`
 
 Run all questions in the questionset already provided via `.using()`.
@@ -329,10 +369,19 @@ containing `['fnName', Pass('passed value')]` or `['fnName', Fail('failed value'
 For `InquiryP` and `InquiryF`, it is not run when the IOU is added, however does run upon resolution of the IOU.
 
 ```js
-const isMoreThanOne = x =>
-    x > 1 ? Pass('Is greater than 1') : Fail('Is less than or equal to 1');
-const isMoreThanTen = x =>
-    x > 10 ? Pass('Is greater than 10') : Fail('Is less than or equal to 10');
+const isMoreThanOne = Question.of([
+    'is it greater than 1?',
+    x =>
+        x > 1 ? Pass('Is greater than 1') : Fail('Is less than or equal to 1')
+]);
+
+const isMoreThanTen = Question.of([
+    'is it greater than 10?',
+    x =>
+        x > 10
+            ? Pass('Is greater than 10')
+            : Fail('Is less than or equal to 10')
+]);
 
 Inquiry.subject(5)
     .informant(console.log)
@@ -349,15 +398,18 @@ Inquiry.subject(5)
 Return a string with the values contained in the Inquiry. This is a common functional programming concept mainly intended for use in debugging.
 
 ```js
-const isMoreThanOne = x =>
-    x > 1 ? Pass('Is greater than 1') : Fail('Is less than or equal to 1');
+const isMoreThanOne = Question.of([
+    'is it greater than 1?',
+    x =>
+        x > 1 ? Pass('Is greater than 1') : Fail('Is less than or equal to 1')
+]);
 
 const result = Inquiry.subject(5)
     .inquire(isMoreThanOne)
     .inspect(); // outputs to string
 
 console.log(result);
-// > Inquiry({subject: Just(5), pass: Pass(['Is greater than 1']), fail: Fail([]), iou: IOU([])});
+// > Inquiry({subject: Just(5), pass: Pass(['Is greater than 1']), fail: Fail([]), iou: IOU([]), informant: _ => _, questionset: Questionset(...), receipt: Receipt(...)});
 ```
 
 ### `.using(Questionset)`
@@ -383,10 +435,19 @@ This is most basic way of returning the values collected by `Inquiry`.
 Warning: this can be, but should not be, used with `InquiryP`as it will not ensure Promises have resolved before returning the value. These unresolved Promises will be contained in the `IOU` list.
 
 ```js
-const isMoreThanOne = x =>
-    x > 1 ? Pass('Is greater than 1') : Fail('Is less than or equal to 1');
-const isMoreThanTen = x =>
-    x > 10 ? Pass('Is greater than 10') : Fail('Is less than or equal to 10');
+const isMoreThanOne = Question.of([
+    'is it greater than 1?',
+    x =>
+        x > 1 ? Pass('Is greater than 1') : Fail('Is less than or equal to 1')
+]);
+
+const isMoreThanTen = Question.of([
+    'is it greater than 10?',
+    x =>
+        x > 10
+            ? Pass('Is greater than 10')
+            : Fail('Is less than or equal to 10')
+]);
 
 const results = Inquiry.subject(5)
     .inquire(isMoreThanOne)
@@ -394,7 +455,7 @@ const results = Inquiry.subject(5)
     .join();
 
 console.log(results);
-// > {subject: Just(5), pass: Pass(['Is greater than 1']), fail: Fail(['Is less than or equal to 10']), iou: IOU([]), informant: _ => _};
+// > {subject: Just(5), pass: Pass(['Is greater than 1']), fail: Fail(['Is less than or equal to 10']), iou: IOU([]), informant: _ => _, questionset: Questionset(...), receipt: Receipt(...)};
 ```
 
 ### `.chain(f)`
@@ -406,18 +467,30 @@ This is useful when you want to convert an Inquiry process chain into a Promise 
 Warning: In the case of `InquiryP`, you will want to use `await` first before using chain (see below), though that requires you to convert into a Promise (or Future).
 
 ```js
-const isMoreThanOne = x =>
-    x > 1 ? Pass('Is greater than 1') : Fail('Is less than or equal to 1');
-const isMoreThanTen = x =>
-    x > 10 ? Pass('Is greater than 10') : Fail('Is less than or equal to 10');
+const myQuestionset = Questionset.of([
+    [
+        'is it greater than 1?',
+        x =>
+            x > 1
+                ? Pass('Is greater than 1')
+                : Fail('Is less than or equal to 1')
+    ],
+    [
+        'is it greater than 10?',
+        x =>
+            x > 10
+                ? Pass('Is greater than 10')
+                : Fail('Is less than or equal to 10')
+    ]
+]);
 
 Inquiry.subject(5)
-    .inquire(isMoreThanOne)
-    .inquire(isMoreThanTen)
+    .using(myQuestionset)
+    .inquireAll()
     .chain(Promise.resolve)
     .then(console.log); // now we're a Promise
 
-// > {subject: Just(5), pass: Pass(['Is greater than 1']), fail: Fail(['Is less than or equal to 10']), iou: IOU([]), informant: _ => _};
+// > {subject: Just(5), pass: Pass(['Is greater than 1']), fail: Fail(['Is less than or equal to 10']), iou: IOU([]), informant: _ => _, questionset: Questionset(...), receipt: Receipt(...)};
 ```
 
 ### `.conclude(f, g)`
@@ -431,14 +504,26 @@ i.e. "Run one function for the list of failures, another for the list of passes,
 This is useful for returning a full accounting of all results and the original subject, in addition to making adjustments based on resulting `Fail` and `Pass` lists.
 
 ```js
-const isMoreThanOne = x =>
-    x > 1 ? Pass({ greaterThanOne: true }) : Fail({ greaterThanOne: false });
-const isMoreThanTen = x =>
-    x > 10 ? Pass({ greaterThanTen: true }) : Fail({ greaterThanTen: false });
+const myQuestionset = Questionset.of([
+    [
+        'is it greater than 1?',
+        x =>
+            x > 1
+                ? Pass({ greaterThanOne: true })
+                : Fail({ greaterThanOne: false })
+    ],
+    [
+        'is it greater than 10?',
+        x =>
+            x > 10
+                ? Pass({ greaterThanTen: true })
+                : Fail({ greaterThanTen: false })
+    ]
+]);
 
 const results = Inquiry.subject(5)
-    .inquire(isMoreThanOne)
-    .inquire(isMoreThanTen)
+    .using(myQuestionset)
+    .inquireAll()
     .conclude(
         a => ({
             failCount: a.join().length,
@@ -451,7 +536,7 @@ const results = Inquiry.subject(5)
     );
 
 console.log(results);
-// > {subject: Just(5), pass: {passCount: 1, passes: ['Is greater than 1']}, fail: {failCount: 1, fails: ['Is less than or equal to 10']}, iou: IOU([]), informant: _ => _};
+// > {subject: Just(5), pass: {passCount: 1, passes: ['Is greater than 1']}, fail: {failCount: 1, fails: ['Is less than or equal to 10']}, iou: IOU([]), informant: _ => _, questionset: Questionset(...), receipt: Receipt(...)};
 ```
 
 ### `.faulted(f)`
@@ -495,14 +580,26 @@ i.e. "Run one function if something failed, another if nothing failed."
 This is useful for conventional error-handling, where you wish to favour handling of `Fail` results regardless of any `Pass` results.
 
 ```js
-const isMoreThanOne = x =>
-    x > 1 ? Pass({ greaterThanOne: true }) : Fail({ greaterThanOne: false });
-const isMoreThanTen = x =>
-    x > 10 ? Pass({ greaterThanTen: true }) : Fail({ greaterThanTen: false });
+const myQuestionset = Questionset.of([
+    [
+        'is it greater than 1?',
+        x =>
+            x > 1
+                ? Pass({ greaterThanOne: true })
+                : Fail({ greaterThanOne: false })
+    ],
+    [
+        'is it greater than 10?',
+        x =>
+            x > 10
+                ? Pass({ greaterThanTen: true })
+                : Fail({ greaterThanTen: false })
+    ]
+]);
 
 const results1 = Inquiry.subject(5)
-    .inquire(isMoreThanOne)
-    .inquire(isMoreThanTen)
+    .using(myQuestionset)
+    .inquireAll()
     .fork(
         x => ({
             failCount: x.join().length,
@@ -518,8 +615,8 @@ console.log(results1);
 // > {failCount: 1, fails: ['Is less than or equal to 10']}
 
 const results2 = Inquiry.subject(15)
-    .inquire(isMoreThanOne)
-    .inquire(isMoreThanTen)
+    .using(myQuestionset)
+    .inquireAll()
     .fork(
         x => ({
             failCount: x.join().length,
@@ -552,17 +649,29 @@ i.e., "Run the function against a merge of fails and passes."
 This may be useful if you'd like to use the `Inquiry` API but do not necessarily care about `Pass` or `Fail` lists, or you may have already handled their positive/negative aspects via other means.
 
 ```js
-const isMoreThanOne = x =>
-    x > 1 ? Pass({ greaterThanOne: true }) : Fail({ greaterThanOne: false });
-const isMoreThanTen = x =>
-    x > 10 ? Pass({ greaterThanTen: true }) : Fail({ greaterThanTen: false });
+const myQuestionset = Questionset.of([
+    [
+        'is it greater than 1?',
+        x =>
+            x > 1
+                ? Pass({ greaterThanOne: true })
+                : Fail({ greaterThanOne: false })
+    ],
+    [
+        'is it greater than 10?',
+        x =>
+            x > 10
+                ? Pass({ greaterThanTen: true })
+                : Fail({ greaterThanTen: false })
+    ]
+]);
 
 const logResults = someFn; // notify another system about the passes/failures
 
 const results = Inquiry.subject(5)
     .informant(logResults)
-    .inquire(isMoreThanOne)
-    .inquire(isMoreThanTen)
+    .using(myQuestionset)
+    .inquireAll()
     .zip(x => x);
 
 console.log(results);
@@ -578,20 +687,31 @@ After resolving all outstanding IOUs or waiting for time `t`, returns a Promise 
 i.e., "Wait for everything to finish, then continue."
 
 ```js
-const isMoreThanOne = x =>
-    x > 1 ? Pass('Is greater than 1') : Fail('Is less than or equal to 1');
-const isMoreThanTen = x =>
-    x > 10 ? Pass('Is greater than 10') : Fail('Is less than or equal to 10');
-const checkDb = async () => Promise.resolve(Pass('here is some data'));
+const myQuestionset = Questionset.of([
+    [
+        'is it greater than 1?',
+        x =>
+            x > 1
+                ? Pass('Is greater than 1')
+                : Fail('Is less than or equal to 1')
+    ],
+    [
+        'is it greater than 10?',
+        x =>
+            x > 10
+                ? Pass('Is greater than 10')
+                : Fail('Is less than or equal to 10')
+    ],
+    ['get me some data', async () => Promise.resolve(Pass('here is some data'))]
+]);
 
 InquiryP.subject(5)
-    .inquire(isMoreThanOne)
-    .inquire(checkDb)
-    .inquire(isMoreThanTen)
+    .using(myQuestionset)
+    .inquireAll()
     .await(20000)
     .then(inq => console.log(inq.join())); // if checkDb() took more than 20 seconds, its result would be a Fail
 
-// > {subject: Just(5), pass: Pass(['Is greater than 1', 'here is some data']), fail: Fail(['Is less than or equal to 10']), iou: IOU([]), informant: _ => _};
+// > {subject: Just(5), pass: Pass(['Is greater than 1', 'here is some data']), fail: Fail(['Is less than or equal to 10']), iou: IOU([]), informant: _ => _, questionset: Questionset(...), receipt: Receipt(...)};
 ```
 
 ## Early results methods:
@@ -618,27 +738,43 @@ The `InquiryP` and `InquiryF` versions of this will wait for outstanding IOUs to
 Useful if you'd like to handle `Fail` results early for some reason, such as throwing a fatal error or notifying an external stakeholder.
 
 ```js
-const isMoreThanOne = x =>
-    x > 1 ? Pass({ greaterThanOne: true }) : Fail({ greaterThanOne: false });
-const isMoreThanTen = x =>
-    x > 10 ? Pass({ greaterThanTen: true }) : Fail({ greaterThanTen: false });
-const isMoreThanTwenty = x =>
-    x > 20
-        ? Pass({ greaterThanTwenty: true })
-        : Fail({ greaterThanTwenty: false });
+const myQuestionset = Questionset.of([
+    [
+        'is it greater than 1?',
+        x =>
+            x > 1
+                ? Pass({ greaterThanOne: true })
+                : Fail({ greaterThanOne: false })
+    ],
+    [
+        'is it greater than 10?',
+        x =>
+            x > 10
+                ? Pass({ greaterThanTen: true })
+                : Fail({ greaterThanTen: false })
+    ],
+    [
+        'is it more than 20?',
+        x =>
+            x > 20
+                ? Pass({ greaterThanTwenty: true })
+                : Fail({ greaterThanTwenty: false })
+    ]
+]);
 
 Inquiry.subject(5)
-    .inquire(isMoreThanOne)
+    .using(myQuestionset)
+    .inquire('is it greater than 1?')
     .breakpoint(x => {
         console.warn('after one', x.fail.join()); // will not happen
         return x;
     })
-    .inquire(isMoreThanTen)
+    .inquire('is it greater than 10?')
     .breakpoint(x => {
         console.warn('after ten', x.fail.join()); // this will run
         return x;
     })
-    .inquire(isMoreThanTwenty);
+    .inquire('is it more than 20?');
 ```
 
 ### `.milestone(f)`
@@ -663,27 +799,43 @@ The `InquiryP` and `InquiryF` versions of this will wait for outstanding IOUs to
 Useful if you'd like to handle `Pass` results early for some reason.
 
 ```js
-const isMoreThanOne = x =>
-    x > 1 ? Pass({ greaterThanOne: true }) : Fail({ greaterThanOne: false });
-const isMoreThanTen = x =>
-    x > 10 ? Pass({ greaterThanTen: true }) : Fail({ greaterThanTen: false });
-const isMoreThanTwenty = x =>
-    x > 20
-        ? Pass({ greaterThanTwenty: true })
-        : Fail({ greaterThanTwenty: false });
+const myQuestionset = Questionset.of([
+    [
+        'is it greater than 1?',
+        x =>
+            x > 1
+                ? Pass({ greaterThanOne: true })
+                : Fail({ greaterThanOne: false })
+    ],
+    [
+        'is it greater than 10?',
+        x =>
+            x > 10
+                ? Pass({ greaterThanTen: true })
+                : Fail({ greaterThanTen: false })
+    ],
+    [
+        'is it more than 20?',
+        x =>
+            x > 20
+                ? Pass({ greaterThanTwenty: true })
+                : Fail({ greaterThanTwenty: false })
+    ]
+]);
 
 Inquiry.subject(5)
-    .inquire(isMoreThanOne)
+    .using(myQuestionset)
+    .inquire('is it greater than 1?')
     .milestone(x => {
         console.warn('after one', x.pass.join()); // this will run
         return Inquiry.of(x);
     })
-    .inquire(isMoreThanTen)
+    .inquire('is it greater than 10?')
     .milestone(x => {
         console.warn('after ten', x.pass.join()); // this will run (still has passes)
         return Inquiry.of(x);
     })
-    .inquire(isMoreThanTwenty);
+    .inquire('is it more than 20?');
 ```
 
 ## Multi-map method:
@@ -695,19 +847,32 @@ Run a function `f` against both `Pass` and `Fail` lists.
 Note that in the case of `InquiryP` and `InquiryF` items in the IOU list will be missed, unless resolved via `.await` easlier. This does currently bury the Inquiry in a Promise layer, however.
 
 ```js
-const isMoreThanOne = x =>
-    x > 1 ? Pass('Is greater than 1') : Fail('Is less than or equal to 1');
-const isMoreThanTen = x =>
-    x > 10 ? Pass('Is greater than 10') : Fail('Is less than or equal to 10');
+const myQuestionset = Questionset.of([
+    [
+        'is it greater than 1?',
+        x =>
+            x > 1
+                ? Pass('Is greater than 1')
+                : Fail('Is less than or equal to 1')
+    ],
+    [
+        'is it greater than 10?',
+        x =>
+            x > 10
+                ? Pass('Is greater than 10')
+                : Fail('Is less than or equal to 10')
+    ]
+]);
+
 const allCaps = items => items.map(x => x.toUpperCase());
 
 Inquiry.subject(5)
-    .inquire(isMoreThanOne)
-    .inquire(isMoreThanTen)
+    .using(myQuestionset)
+    .inquireAll()
     .unison(allCaps)
     .join();
 
-// > {subject: Just(5), pass: Pass(['IS GREATER THAN 1']), fail: Fail(['IS LESS THANK OR EQUAL TO 10']), iou: IOU([]), informant: _ => _};
+// > {subject: Just(5), pass: Pass(['IS GREATER THAN 1']), fail: Fail(['IS LESS THANK OR EQUAL TO 10']), iou: IOU([]), informant: _ => _, questionset: Questionset(...), receipt: Receipt(...)};
 ```
 
 ## Flow-control method:
@@ -720,18 +885,30 @@ This would be useful if you are using `Pass`/`Fail` as a proxy for a less opinio
 
 ```js
 // @todo more practical example...
-const isMoreThanOne = x =>
-    x > 1 ? Pass('Is greater than 1') : Fail('Is less than or equal to 1');
-const isMoreThanTen = x =>
-    x > 10 ? Pass('Is greater than 10') : Fail('Is less than or equal to 10');
+const myQuestionset = Questionset.of([
+    [
+        'is it greater than 1?',
+        x =>
+            x > 1
+                ? Pass('Is greater than 1')
+                : Fail('Is less than or equal to 1')
+    ],
+    [
+        'is it greater than 10?',
+        x =>
+            x > 10
+                ? Pass('Is greater than 10')
+                : Fail('Is less than or equal to 10')
+    ]
+]);
 
 const result = Inquiry.subject(5)
-    .inquire(isMoreThanOne)
-    .inquire(isMoreThanTen)
+    .using(myQuestionset)
+    .inquireAll()
     .swap();
 
 console.log(result);
-// > {subject: Just(5), pass: Pass(['Is less than or equal to 10']), fail: Fail(['Is greater than 1']), iou: IOU([]), informant: _ => _};
+// > {subject: Just(5), pass: Pass(['Is less than or equal to 10']), fail: Fail(['Is greater than 1']), iou: IOU([]), informant: _ => _, questionset: Questionset(...), receipt: Receipt(...)};
 ```
 
 ## Monad methods
@@ -760,14 +937,19 @@ const filterPass = inq => {
     return inq; // must return with all properties intact (passes, fails, ious, etc)
 };
 
+const qset = Questionset.of([
+    ['pass one', x => Pass(1)],
+    ['pass two', x => Pass(2)]
+])
+
 const result = Inquiry.subject('something')
-    .inquire(passOne)
-    .inquiry(passTwo)
+    .using(qset)
+    .inquireAll()
     .map(filterPass)
     .join();
 
 console.log(result);
-// > { subject: Just('something), pass: Pass([2]), fail: Fail([]), iou: IOU([]), informant: _ => _}
+// > { subject: Just('something), pass: Pass([2]), fail: Fail([]), iou: IOU([]), informant: _ => _, questionset: Questionset(...), receipt: Receipt(...)}
 ```
 
 ### `.ap(f)`
