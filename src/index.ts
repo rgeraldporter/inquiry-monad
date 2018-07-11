@@ -534,7 +534,7 @@ const InquiryP = (x: InquiryValue): InquiryMonad => ({
                 fnName
             );
             console.warn('response was:', resp);
-            return Inquiry(x);
+            return InquiryP(x);
         };
 
         const inquireResponse =
