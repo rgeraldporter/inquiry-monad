@@ -224,7 +224,6 @@ const warnTypeError = <T>(x: T): InquiryMonad => {
 };
 
 // @todo validate constructor via Symbol
-// @todo add receipts property
 const InquiryOf = (x: InquiryValue): InquiryMonad =>
     'subject' in x &&
     'fail' in x &&
@@ -240,6 +239,7 @@ const Inquiry = (x: InquiryValue): InquiryMonad => ({
     // Inquire: core method
     // You may pass a Function, a QuestionMonad (with a function), or a string which will look up
     //  in the current Inquiry's questionset.
+    // @todo in 1.x, deprecate Function as an option
     inquire: (f: Function | string | QuestionMonad): InquiryMonad => {
         const extractName = (f: string | QuestionMonad) =>
             (f as QuestionMonad)[$$questionSymbol]
@@ -602,7 +602,7 @@ const InquiryP = (x: InquiryValue): InquiryMonad => ({
                     response[$$passSymbol] ||
                     response[$$inquirySymbol]
                         ? response.answer(inq.join(), fnName, InquiryP)
-                        : Pass(response).answer(x, fnName, InquiryP); // @todo this should be warNotPassFail
+                        : warnNotPassFail(response);
 
                 return inquireResponse.then
                     ? InquiryP({
