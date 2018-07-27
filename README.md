@@ -104,16 +104,16 @@ Optionally, if you are using [`fluture`](https://www.npmjs.com/package/fluture) 
 npm install inquiry-monad-futures -S
 ```
 
-## Demos
+## Example Demos
 
-Some mini-projects will be included soon in this document to give practical examples of use. Where possible I will include links directly to a [Glitch](https://glitch.com) project so you may remix the code and play with the API.
+Here are some basic demonstrations of the Inquiry API in use. These projects are using [Glitch](https://glitch.com) so you may remix the code and play with the API on your own.
 
 -   [Birds Around Me](https://glitch.com/edit/#!/local-birds?path=server.js:70:1) - reads a user's GPS position, and retrieves birds reported to [eBird](https://ebird.org/) via eBird API. Inquiry is used to then answer a series of questions about the data.
 -   [Inquiry Weather Example](https://glitch.com/edit/#!/weather-checker?path=server.js:91:6) - reads the current weather forecast from Environment Canada for various places and answers some questions about results.
 
-## Inquiry types
+## Inquiry initial types
 
-There are three types of Inquiry:
+There are three initial types of Inquiry:
 
 -   `Inquiry` (syncronous-only)
 -   `InquiryP` (supports Promises)
@@ -131,7 +131,7 @@ Each of these result types is a monad, and come with built-in methods for handli
 
 ## Inquiry subject type
 
-The subject uses `Maybe` to contain the value, which can result in one of two types of values:
+The subject uses `Maybe` to contain the value after you have provided it, which can result in one of two types of values:
 
 -   `Just`: a non-null, non-undefined value
 -   `Nothing`: an undefined or null value
@@ -148,17 +148,17 @@ The result is a collection containing a list of result types for `Fail`, `Pass`,
 
 The advantage over a Promise chain is that the original subject and each individual function return is retained through the chain of `.inquire` calls, giving observability over the chain.
 
-Additionally, this gives the ability to contain Promises better, in a more functional-friendly style.
+Additionally, this gives the ability to better handle Promises by containing them within Inquiry, giving greater control over potential side-effects.
 
 ## Comparing to `Either` or `Validation`
 
-For those who might wish to compare to a conventional `Either` (`Left`/`Right`) monad or `Validation` (`Failure`/`Success`) applicative functor in functional programming, here are some advantages brought by using Inquiry:
+For those from a background in functional programming who might wish to compare to a conventional `Either` (`Left`/`Right`) monad or `Validation` (`Failure`/`Success`) applicative functor, here are some advantages brought by using Inquiry API:
 
 -   Inquiry aggregates **all** results, and does not eliminate positive results when a negative one is acquired
 -   Inquiry can run functions against both `Pass` and `Fail` lists
 -   Inquiry always retains the original subject rather than transforming it
 -   Inquiry is designed to be an expressive, easily understood API, to be learned with little or no previous functional programming experience requirement
--   While Inquiry is opinionated and has many "`Fail`-first" methods, additional methods are provided that allow for a less opinionated usage
+-   While Inquiry is opinionated and has many "`Fail`-first" methods, additional methods are provided that allow for a less opinionated usage if desired
 
 # Question, Questionset & Receipt
 
@@ -202,7 +202,7 @@ const results = Inquiry.subject('A short sentence.')
     .inquire('are there any line breaks?');
 ```
 
-You may also use `.inquireAll()` to use all questions in the questionset.
+You may also use `.inquireAll()` to ask all questions in the questionset.
 
 ### Question
 
@@ -252,18 +252,20 @@ console.log(results.join().receipt.inspect());
 // > Receipt(['is it not flagged?', Fail(was flagged)], ['is the score higher than 10?', Pass(score higher than 10)])
 ```
 
-More functionality and options will be built off of this new API in future releases.
+More functionality and options will be built upon this API in future releases.
 
 # `Inquiry` Constructors
 
 ## `Inquiry.subject(value)`
 
-Returns a new `Inquiry` monad, which contains an object with properties `subject`, `pass`, `fail`, `iou`, and a single method, `informant`.
+Returns a new `Inquiry` monad, which contains an object with properties `subject`, `pass`, `fail`, `iou`, `questionset`, `receipt`, and a single method, `informant`.
 
 -   `subject`: the `value` that was passed to `Inquiry.subject`. This value is contained within a `Maybe` monad, meaning it will either be `Just(value)` or `Nothing()`.
 -   `pass`: a `Pass` monad, containing an array of values
 -   `fail`: a `Fail` monad, containing an array of values
--   `ious`: an `IOU` monad, containing an array of Promises or Futures (only relevant with `InquiryP` and `InquiryF`)
+-   `iou`: an `IOU` monad, containing an array of Promises or Futures (only relevant with `InquiryP` and `InquiryF`)
+-   `questionset`: monad, containing an array of functions used to "question" the subject data
+-   `receipt`: monad, containing an array of results from each question
 -   `informant`: a function to be called upon the return of a `.inquire` call, for observation/logging purposes (is set by calling `.informant` method)
 
 ## `InquiryP.subject(value)`
@@ -395,7 +397,7 @@ Inquiry.subject(5)
 
 ### `.inspect()`
 
-Return a string with the values contained in the Inquiry. This is a common functional programming concept mainly intended for use in debugging.
+Return a string with the values contained in the Inquiry. This is a common functional programming concept mainly intended for use in debugging and software testing.
 
 ```js
 const isMoreThanOne = Question.of([
@@ -414,8 +416,6 @@ console.log(result);
 
 ### `.using(Questionset)`
 
-Experimental.
-
 Given a `Questionset`, use these questions in `inquire` and `inquireMap` if using the string-based inquire method.
 
 ## Unwrap methods:
@@ -424,7 +424,7 @@ The following methods are to be used as a means of "exiting" the Inquiry process
 
 `InquiryP` unwrap methods exit into a Promise.
 
-`InquiryF` unwrap methods do not exit into a Future, but you can convert to a promise by unwrapping with `.promise()`.
+`InquiryF` unwrap methods _do not exit into a Future_, but you can convert to a promise by unwrapping with `.promise()`.
 
 ### `.join()` (only useful for `Inquiry`)
 
@@ -432,7 +432,7 @@ Returns the contained `Inquiry` object value, without any additional handling.
 
 This is most basic way of returning the values collected by `Inquiry`.
 
-Warning: this can be, but should not be, used with `InquiryP`as it will not ensure Promises have resolved before returning the value. These unresolved Promises will be contained in the `IOU` list.
+Warning: this can be, but should not be, used with `InquiryP` or `InquiryF` as it will not ensure Promises/Futures have resolved before returning the value. These unresolved Promises/Futures will be contained in the `IOU` list.
 
 ```js
 const isMoreThanOne = Question.of([
@@ -462,9 +462,9 @@ console.log(results);
 
 Passes the contained `Inquiry` object value into a function `f`. (You may optionally continue the Inquiry chain by having function `f` return `Inquiry.of(value)` as long as it adheres to the object structure.)
 
-This is useful when you want to convert an Inquiry process chain into a Promise or a Future.
+This is useful when you want to convert an Inquiry process chain into a Promise or a Future, or another monad.
 
-Warning: In the case of `InquiryP`, you will want to use `await` first before using chain (see below), though that requires you to convert into a Promise (or Future).
+Warning: In the case of `InquiryP` or `InquiryF`, you will want to use `await` first before using chain (see below), though that requires you to convert into a Promise (or Future).
 
 ```js
 const myQuestionset = Questionset.of([
@@ -497,7 +497,7 @@ Inquiry.subject(5)
 
 Returns the contained `Inquiry` object value, with map functions `f` and `g` applied to both fail (`f`) and pass (`g`).
 
-For `InquiryP`, this method will wait for resolution of all outstanding IOUs (Promises) before applying `f` and `g`.
+For `InquiryP` or `InquiryF`, this method will wait for resolution of all outstanding IOUs (Promises) before applying `f` and `g`.
 
 i.e. "Run one function for the list of failures, another for the list of passes, and return back everything."
 
@@ -678,7 +678,7 @@ console.log(results);
 // >> [{greaterThanOne: true}, {greaterThanTen: false}]
 ```
 
-### `.await(t)` (`InquiryP` and `InquiryF` only)
+### `.await(t)` _(`InquiryP` and `InquiryF` only)_
 
 `t` is optional.
 
@@ -913,9 +913,13 @@ console.log(result);
 
 ## Monad methods
 
+These methods can be used against any monads in this API: `Inquiry`, `Pass`, `Fail`, `Questionset`, `Question`, `IOU`, `Receipt`, to name a few.
+
 ### `.map(f)`
 
 Taking a function `f`, apply the contained value and return the result in the same type of monad.
+
+NOTE: You should only be using this on `Inquiry`/`InquiryP`/`InquiryF` if you have a good understanding of their type structure, as this is a function where it is very easy to break things.
 
 ```js
 const R = require('ramda');
