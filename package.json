@@ -1,10 +1,10 @@
 {
   "name": "inquiry-monad",
-  "version": "0.29.4",
+  "version": "0.29.5",
   "description": "Inquiry is an expressive API that allows one ask multiple questions about a subject value, and observe all results. This process returns a collection of all passes, fails, and the original subject value.",
   "main": "built/index.js",
   "scripts": {
-    "test": "jest",
+    "test": "jest --env=node",
     "build": "./node_modules/.bin/tsc",
     "postinstall": "npm run build",
     "bundle": "webpack --config webpack.config.js"
