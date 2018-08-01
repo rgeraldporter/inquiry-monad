@@ -641,14 +641,24 @@ describe('The module', () => {
                     ]);
 
                     // verify informant
-                    expect(usedQs[0][0]).toEqual('does it start with a capital letter?');
-                    expect(usedQs[0][1].inspect()).toEqual('Pass(starts with a capital)');
+                    expect(usedQs[0][0]).toEqual(
+                        'does it start with a capital letter?'
+                    );
+                    expect(usedQs[0][1].inspect()).toEqual(
+                        'Pass(starts with a capital)'
+                    );
 
-                    expect(usedQs[1][0]).toEqual('are there more than ten words?');
-                    expect(usedQs[1][1].inspect()).toEqual('Fail(ten words or less)');
+                    expect(usedQs[1][0]).toEqual(
+                        'are there more than ten words?'
+                    );
+                    expect(usedQs[1][1].inspect()).toEqual(
+                        'Fail(ten words or less)'
+                    );
 
                     expect(usedQs[2][0]).toEqual('are there any line breaks?');
-                    expect(usedQs[2][1].inspect()).toEqual('Fail(no line breaks)');
+                    expect(usedQs[2][1].inspect()).toEqual(
+                        'Fail(no line breaks)'
+                    );
 
                     expect(usedQs[3][0]).toEqual('pause for a moment');
                     expect(usedQs[3][1].inspect()).toEqual('Pass(passed 15ms)');
@@ -656,14 +666,28 @@ describe('The module', () => {
                 }
             )
             .then((inq: InquiryValue) => {
-                expect(inq.receipt.join()[0][0]).toEqual('does it start with a capital letter?');
-                expect(inq.receipt.join()[0][1].inspect()).toEqual('Pass(starts with a capital)');
-                expect(inq.receipt.join()[1][0]).toEqual('are there more than ten words?');
-                expect(inq.receipt.join()[1][1].inspect()).toEqual('Fail(ten words or less)');
-                expect(inq.receipt.join()[2][0]).toEqual('are there any line breaks?');
-                expect(inq.receipt.join()[2][1].inspect()).toEqual('Fail(no line breaks)');
+                expect(inq.receipt.join()[0][0]).toEqual(
+                    'does it start with a capital letter?'
+                );
+                expect(inq.receipt.join()[0][1].inspect()).toEqual(
+                    'Pass(starts with a capital)'
+                );
+                expect(inq.receipt.join()[1][0]).toEqual(
+                    'are there more than ten words?'
+                );
+                expect(inq.receipt.join()[1][1].inspect()).toEqual(
+                    'Fail(ten words or less)'
+                );
+                expect(inq.receipt.join()[2][0]).toEqual(
+                    'are there any line breaks?'
+                );
+                expect(inq.receipt.join()[2][1].inspect()).toEqual(
+                    'Fail(no line breaks)'
+                );
                 expect(inq.receipt.join()[3][0]).toEqual('pause for a moment');
-                expect(inq.receipt.join()[3][1].inspect()).toEqual('Pass(passed 15ms)');
+                expect(inq.receipt.join()[3][1].inspect()).toEqual(
+                    'Pass(passed 15ms)'
+                );
             });
     });
 
@@ -807,6 +831,52 @@ describe('The module', () => {
                     : Fail('Score not higher than 10')
         ]);
 
+        const pauseMoment = Question.of([
+            'pause for a moment',
+            (a: string): Promise<PassFailMonad> =>
+                new Promise((_, reject) => {
+                    setTimeout(() => {
+                        reject(Fail('failed 15ms'));
+                    }, 15);
+                })
+        ]);
+
+        return InquiryP.subject(subject)
+            .inquire(notFlagged)
+            .inquire(passingScore)
+            .inquire(pauseMoment)
+            .conclude(
+                (fail: FailMonad) => {
+                    expect(fail.join()).toEqual(['was flagged', 'failed 15ms']);
+                },
+                (pass: PassMonad) => {
+                    expect(pass.join()).toEqual(['Score higher than 10']);
+                    setTimeout(done, 1);
+                }
+            );
+    });
+
+    it('should be able to handle Questions in InquiryP without IOUs', (done: Function) => {
+        const subject = {
+            flagged: true,
+            score: 15,
+            started: 1530293458
+        };
+
+        const notFlagged = Question.of([
+            'is it not flagged?',
+            (x: any): PassFailMonad =>
+                !x.flagged ? Pass('was not flagged') : Fail('was flagged')
+        ]);
+
+        const passingScore = Question.of([
+            'is the score higher than 10?',
+            (x: any): PassFailMonad =>
+                x.score > 10
+                    ? Pass('Score higher than 10')
+                    : Fail('Score not higher than 10')
+        ]);
+
         return InquiryP.subject(subject)
             .inquire(notFlagged)
             .inquire(passingScore)
@@ -823,33 +893,81 @@ describe('The module', () => {
 
     it('should be able to concatenate Questionsets', () => {
         const q1 = Questionset.of([
+            ['first question?', (x: any) => Pass(1)],
+            ['second question?', (x: any) => Fail(2)]
+        ]);
+
+        const q2 = Questionset.of([['third question?', (x: any) => Pass(3)]]);
+
+        expect((q1 as QuestionsetMonad).concat(q2).join().length).toBe(3);
+
+        expect((q1 as QuestionsetMonad).concat(q2).join()[2][0]).toBe(
+            'third question?'
+        );
+
+        expect((q1 as QuestionsetMonad).concat(q2).join()[0][0]).toBe(
+            'first question?'
+        );
+    });
+
+    it('can handle Questionsets and do inquireAll with rejections', (done: Function) => {
+        const questionSet = Questionset.of([
             [
-                'first question?',
-                (x: any) => Pass(1)
+                'does it start with a capital letter?',
+                (a: string): PassFailMonad =>
+                    /^[A-Z]/.test(a)
+                        ? Pass('starts with a capital')
+                        : Fail('does not start with a capital')
             ],
             [
-                'second question?',
-                (x: any) => Fail(2)
-            ]
-        ]);
-
-        const q2 = Questionset.of([
+                'are there more than ten words?',
+                (a: string): PassFailMonad =>
+                    a.split(' ').length > 10
+                        ? Pass('more than ten words')
+                        : Fail('ten words or less')
+            ],
             [
-                'third question?',
-                (x: any) => Pass(3)
+                'pause for a moment with fail',
+                (a: string): Promise<PassFailMonad> =>
+                    new Promise((_, reject) => {
+                        setTimeout(() => {
+                            reject(Fail('failed 15ms'));
+                        }, 15);
+                    })
+            ],
+            [
+                'pause for a moment with pass',
+                (a: string): Promise<PassFailMonad> =>
+                    new Promise((resolve) => {
+                        setTimeout(() => {
+                            resolve(Pass('passed 10ms'));
+                        }, 10);
+                    })
+            ],
+            [
+                /^are there any line breaks\?$/,
+                (a: string) =>
+                    /\r|\n/.exec(a)
+                        ? Pass('there were line breaks')
+                        : Fail('no line breaks')
             ]
         ]);
 
-        expect(
-            (q1 as QuestionsetMonad).concat(q2).join().length
-        ).toBe(3);
-
-        expect(
-            (q1 as QuestionsetMonad).concat(q2).join()[2][0]
-        ).toBe('third question?');
-
-        expect(
-            (q1 as QuestionsetMonad).concat(q2).join()[0][0]
-        ).toBe('first question?');
-    })
+        return InquiryP.subject('A short sentence.')
+            .using(questionSet)
+            .inquireAll()
+            .conclude(
+                (fail: FailMonad) => {
+                    expect(fail.join()).toEqual([
+                        'ten words or less',
+                        'no line breaks',
+                        'failed 15ms'
+                    ]);
+                },
+                (pass: PassMonad) => {
+                    expect(pass.join()).toEqual(['starts with a capital', 'passed 10ms']);
+                    setTimeout(done, 1);
+                }
+            );
+    });
 });

@@ -29,6 +29,22 @@ const noop = (): void => {};
 
 const $$notFoundSymbol: unique symbol = Symbol('Not found');
 
+// like Promise.all without the fast reject functionality
+const PromiseEvery = <T>(promises: Promise<T>[]): Promise<any[]> =>
+    new Promise(resolve => {
+        const results: any[] = [];
+        let count = 0;
+        promises.forEach((promise, idx) => {
+            promise
+                .catch(err => err) // pass errs down as (presumably) Fail
+                .then(valueOrError => {
+                    results[idx] = valueOrError;
+                    count += 1;
+                    count === promises.length && resolve(results);
+                });
+        });
+    });
+
 const IOU = (x: QuestionMonad | Array<QuestionMonad>): IOUMonad => ({
     map: (f: Function): IOUMonad => IOU(f(x)),
     chain: (f: Function): any => f(x),
@@ -496,21 +512,30 @@ const InquiryPOf = (x: InquiryValue): InquiryMonad =>
         : warnTypeErrorP(x);
 
 const buildInq = <T>(x: T) => (vals: Array<any>): InquiryMonad =>
-    vals.reduce((acc, cur) => cur[1].answer(acc, cur[0], InquiryP).join(), x);
+    vals
+        ? vals.reduce(
+              (acc, cur) =>
+                  cur ? cur[1].answer(acc, cur[0], InquiryP).join() : acc,
+              x
+          )
+        : x;
 
 // this is a bit complex, so here it goes:
 // Take all our IOUs (Questions), extract and resolve their Promises
 // then take those results apply to a tuple with the question name/description
 const resolveQs = (x: InquiryValue) =>
-    x.iou.join().map(
-        (q: QuestionMonad): Promise<PassFailMonad> =>
-            q
-                .extract()()
-                .then(
-                    (result: PassFailMonad): Promise<Array<any>> =>
-                        Promise.resolve([q.name(), result])
-                )
-    );
+    x.iou.join().length
+        ? x.iou.join().map(
+              (q: QuestionMonad): Promise<PassFailMonad> =>
+                  q
+                      .extract()()
+                      .catch((err: any) => err)
+                      .then(
+                          (result: PassFailMonad): Promise<Array<any>> =>
+                              Promise.resolve([q.name(), result])
+                      )
+          )
+        : [Promise.resolve()];
 
 const InquiryP = (x: InquiryValue): InquiryMonad => ({
     inquire: (f: Function | string | QuestionMonad) => {
@@ -721,10 +746,9 @@ const InquiryP = (x: InquiryValue): InquiryMonad => ({
 
     // Unwrapping methods: all return Promises, all complete outstanding IOUs
 
-    // @todo handle Promise.reject? Is it a failure or what?
     // Unwraps the Inquiry after ensuring all IOUs are completed
-    conclude: async (f: Function, g: Function): Promise<InquiryValue> =>
-        Promise.all(resolveQs(x))
+    conclude: async (f: Function, g: Function): Promise<InquiryValue> => {
+        return PromiseEvery(resolveQs(x))
             .then(buildInq(x))
             .then(i => (i[$$inquirySymbol] ? i.join() : i))
             .then(y => ({
@@ -735,11 +759,12 @@ const InquiryP = (x: InquiryValue): InquiryMonad => ({
                 informant: y.informant,
                 questionset: y.questionset,
                 receipt: y.receipt
-            })),
+            }));
+    },
 
     // If no fails, handoff aggregated passes to supplied function; if fails, return noop
     cleared: async (f: Function): Promise<InquiryMonad | Array<any>> =>
-        Promise.all(resolveQs(x))
+        PromiseEvery(resolveQs(x))
             .then(buildInq(x))
             .then(i => (i[$$inquirySymbol] ? i.join() : i))
             .then(y => (y.fail.isEmpty() ? f(y.pass) : noop()))
@@ -747,14 +772,14 @@ const InquiryP = (x: InquiryValue): InquiryMonad => ({
 
     // If fails, handoff aggregated fails to supplied function; if no fails, return noop
     faulted: async (f: Function): Promise<InquiryMonad | Array<any>> =>
-        Promise.all(resolveQs(x))
+        PromiseEvery(resolveQs(x))
             .then(buildInq(x))
             .then(i => (i[$$inquirySymbol] ? i.join() : i))
             .then(y => (y.fail.isEmpty() ? noop() : f(y.fail))),
 
     // If any passes, handoff aggregated passes to supplied function; if no passes, return noop
     suffice: async (f: Function): Promise<InquiryMonad | Array<any>> =>
-        Promise.all(resolveQs(x))
+        PromiseEvery(resolveQs(x))
             .then(buildInq(x))
             .then(i => (i[$$inquirySymbol] ? i.join() : i))
             .then(y => (y.pass.isEmpty() ? noop() : f(y.pass)))
@@ -762,28 +787,28 @@ const InquiryP = (x: InquiryValue): InquiryMonad => ({
 
     // If no passes, handoff aggregated fails to supplied function; if any passes, return noop
     scratch: async (f: Function): Promise<InquiryMonad | Array<any>> =>
-        Promise.all(resolveQs(x))
+        PromiseEvery(resolveQs(x))
             .then(buildInq(x))
             .then(i => (i[$$inquirySymbol] ? i.join() : i))
             .then(y => (y.pass.isEmpty() ? f(y.fail) : noop())),
 
     // Take left function and hands off fails if any, otherwise takes right function and hands off passes to that function
     fork: async (f: Function, g: Function): Promise<Array<any>> =>
-        Promise.all(resolveQs(x))
+        PromiseEvery(resolveQs(x))
             .then(buildInq(x))
             .then(i => (i[$$inquirySymbol] ? i.join() : i))
             .then(y => (y.fail.join().length ? f(y.fail) : g(y.pass))),
 
     // Take left function and hands off fails if any, otherwise takes right function and hands off passes to that function
     fold: async (f: Function, g: Function): Promise<Array<any>> =>
-        Promise.all(resolveQs(x))
+        PromiseEvery(resolveQs(x))
             .then(buildInq(x))
             .then(i => (i[$$inquirySymbol] ? i.join() : i))
             .then(y => (y.pass.join().length ? f(y.pass) : g(y.fail))),
 
     // return a Promise containing a merged fail/pass resultset array
     zip: async (f: Function): Promise<Array<any>> =>
-        Promise.all(resolveQs(x))
+        PromiseEvery(resolveQs(x))
             .then(buildInq(x))
             .then(i => (i[$$inquirySymbol] ? i.join() : i))
             .then(y => f(y.fail.join().concat(y.pass.join()))),
@@ -797,7 +822,7 @@ const InquiryP = (x: InquiryValue): InquiryMonad => ({
                 Fail('Promise(s) have timed out')
             ])
         );
-        const awaitPromises = Promise.all(resolveQs(x));
+        const awaitPromises = PromiseEvery(resolveQs(x));
 
         return (
             Promise.race([timeLimit, awaitPromises])
