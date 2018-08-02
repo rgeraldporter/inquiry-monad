@@ -117,3 +117,21 @@ export interface QuestionValue extends Array<string | RegExp | Function> {
     0: string | RegExp;
     1: Function;
 }
+
+export interface MonadConstructor {
+    of: Function
+}
+
+export interface QuestionsetMonadConstructor extends MonadConstructor {
+    of: (x: any) => QuestionsetMonad | void
+}
+
+export interface QuestionMonadConstructor extends MonadConstructor {
+    of: (x: any) => QuestionMonad | void
+}
+
+
+export interface InquiryConstructor extends MonadConstructor {
+    subject: (x: any) => InquiryMonad,
+    of: (a: InquiryValue) => InquiryMonad
+}

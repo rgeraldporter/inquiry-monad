@@ -12,7 +12,10 @@ import {
     ReceiptValue,
     QuestionsetMonad,
     QuestionMonad,
-    QuestionValue
+    QuestionValue,
+    InquiryConstructor,
+    QuestionMonadConstructor,
+    QuestionsetMonadConstructor
 } from './inquiry-monad';
 
 import {
@@ -31,13 +34,13 @@ const $$notFoundSymbol: unique symbol = Symbol('Not found');
 
 // like Promise.all without the fast reject functionality
 const PromiseEvery = <T>(promises: Promise<T>[]): Promise<any[]> =>
-    new Promise(resolve => {
+    new Promise((resolve: any) => {
         const results: any[] = [];
-        let count = 0;
-        promises.forEach((promise, idx) => {
+        let count: number = 0;
+        promises.forEach((promise: Promise<T>, idx: number) => {
             promise
                 .catch(err => err) // pass errs down as (presumably) Fail
-                .then(valueOrError => {
+                .then((valueOrError: any) => {
                     results[idx] = valueOrError;
                     count += 1;
                     count === promises.length && resolve(results);
@@ -181,7 +184,7 @@ const Question = (x: QuestionValue): QuestionMonad => ({
 const QuestionOf = (x: QuestionValue): QuestionMonad | void =>
     Array.isArray(x) ? Question(x) : questionTypeError(x);
 
-const exportQuestion = {
+const exportQuestion: QuestionMonadConstructor = {
     of: QuestionOf
 };
 
@@ -215,7 +218,7 @@ const questionsetTypeError = (x: any): void =>
 const QuestionsetOf = (x: Array<QuestionValue>): QuestionsetMonad | void =>
     Array.isArray(x) ? Questionset(x) : questionsetTypeError(x);
 
-const exportQuestionset = {
+const exportQuestionset: QuestionsetMonadConstructor = {
     of: QuestionsetOf
 };
 
@@ -475,7 +478,7 @@ const Inquiry = (x: InquiryValue): InquiryMonad => ({
     [$$inquirySymbol]: true
 });
 
-const exportInquiry = {
+const exportInquiry: InquiryConstructor = {
     subject: InquirySubject,
     of: InquiryOf
 };
@@ -835,7 +838,7 @@ const InquiryP = (x: InquiryValue): InquiryMonad => ({
     [$$inquirySymbol]: true
 });
 
-const exportInquiryP = {
+const exportInquiryP: InquiryConstructor = {
     subject: InquiryPSubject,
     of: InquiryPOf
 };
