@@ -24,8 +24,8 @@ export interface PassFailMonad extends Monad {
     head: Function;
     tail: Function;
     isEmpty: Function;
-    [$$passSymbol]: Boolean;
-    [$$failSymbol]: Boolean;
+    [$$passSymbol]: boolean;
+    [$$failSymbol]: boolean;
     [$$iouSymbol]: false;
     [$$inquirySymbol]: false;
 }

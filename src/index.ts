@@ -86,10 +86,10 @@ const Pass = <T>(x: Array<T> | T): PassMonad => ({
     answer: (
         i: InquiryValue,
         n: string = '(anonymous)',
-        c: Function = Inquiry
+        Ix: Function = Inquiry
     ): InquiryMonad => {
         i.informant([n, Pass(x)]);
-        return c({
+        return Ix({
             subject: i.subject,
             fail: i.fail,
             iou: i.iou,
@@ -123,10 +123,10 @@ const Fail = <T>(x: Array<T> | T): FailMonad => ({
     answer: (
         i: InquiryValue,
         n: string = '(anonymous)',
-        c: Function = Inquiry
+        Ix: Function = Inquiry
     ): InquiryMonad => {
         i.informant([n, Fail(x)]);
-        return c({
+        return Ix({
             subject: i.subject,
             fail: i.fail.concat(Fail(x)),
             pass: i.pass,
@@ -259,6 +259,8 @@ const Inquiry = (x: InquiryValue): InquiryMonad => ({
     // You may pass a Function, a QuestionMonad (with a function), or a string which will look up
     //  in the current Inquiry's questionset.
     // @todo in 1.x, deprecate Function as an option
+    // @todo should we allow a Questionset to be passed here, and process all of them?
+    // @todo after simplifying, can BoolTable help here?
     inquire: (f: Function | string | QuestionMonad): InquiryMonad => {
         const extractName = (f: string | QuestionMonad) =>
             (f as QuestionMonad)[$$questionSymbol]
@@ -345,6 +347,7 @@ const Inquiry = (x: InquiryValue): InquiryMonad => ({
             })
         ),
 
+        // @todo handle if no Questionset / .using()
     inquireAll: (): InquiryMonad =>
         (x.questionset as QuestionsetMonad).chain(
             (questions: Array<QuestionValue>): InquiryMonad =>

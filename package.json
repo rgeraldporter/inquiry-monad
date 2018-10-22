@@ -1,6 +1,6 @@
 {
   "name": "inquiry-monad",
-  "version": "0.30.1",
+  "version": "0.30.2",
   "description": "Inquiry is an expressive API that allows one ask multiple questions about a subject value, and observe all results. This process returns a collection of all passes, fails, and the original subject value.",
   "main": "built/index.js",
   "scripts": {
@@ -26,18 +26,18 @@
   "author": "Robert Gerald Porter <rob@weeverapps.com>",
   "license": "MIT",
   "devDependencies": {
+    "@types/jest": "22.2.3",
+    "@types/ramda": "0.25.24",
     "awesome-typescript-loader": "5.0.0",
+    "jest": "22.4.4",
     "ramda": "0.25.0",
+    "ts-jest": "22.4.6",
     "ts-node": "6.0.0",
     "webpack": "4.8.3",
     "webpack-cli": "2.1.4"
   },
   "dependencies": {
-    "@types/jest": "22.2.3",
-    "@types/ramda": "0.25.24",
-    "jest": "22.4.4",
     "simple-maybe": "1.0.0",
-    "ts-jest": "22.4.6",
     "typescript": "2.8.3"
   }
 }
