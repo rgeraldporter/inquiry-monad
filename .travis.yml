@@ -3,10 +3,10 @@ sudo: required
 language: node_js
 
 node_js:
-  - "9"
+  - "10"
 
 before_script:
-  - npm install
+  - npm i
 
 script:
   - npm run test
