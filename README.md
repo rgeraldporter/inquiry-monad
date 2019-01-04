@@ -4,6 +4,8 @@
 
 Inquiry is an expressive API that allows one ask multiple questions about a subject value, and observe all results. This process returns a collection of all passes, fails, and the original subject value.
 
+It is most useful for validating data against any number of expectations, especially if you would like to fully understand why something does not validate, or handle cases of partial validation.
+
 ## Basic examples
 
 ```js
@@ -135,13 +137,9 @@ These are also monads, see "Monad methods" below for details on how to handle th
 
 _Note that unless otherwise stated in this document, `Inquiry` and `InquiryP` are interchangeable, and mostly share the same API._
 
-Inquiry can take any _subject_ and test it against various question functions via the `.inquire` method. The question functions should return `Pass` or `Fail` values.
+Inquiry can take any _subject_ and test it against any number of `Question` or `Questionset` functions via the `.inquire` or `.inquireAll` method. All `Question` functions must return `Pass` or `Fail` values, or the results of another Inquiry.
 
-The result is a collection containing a list of result types for `Fail`, `Pass`, and `IOU`, in addition to the original `subject`.
-
-The advantage over a Promise chain is that the original subject and each individual function return is retained through the chain of `.inquire` calls, giving observability over the chain.
-
-Additionally, this gives the ability to better handle Promises by containing them within Inquiry, giving greater control over potential side-effects.
+The result of an Inquiry is a collection containing a list of result types for `Fail`, `Pass`, `IOU`, and `Receipt`, in addition to the original `subject` and any assigned `Questionset` collections.
 
 ## Comparing to `Either` or `Validation`
 
@@ -151,7 +149,7 @@ For those from a background in functional programming who might wish to compare 
 -   Inquiry can run functions against both `Pass` and `Fail` lists
 -   Inquiry always retains the original subject rather than transforming it
 -   Inquiry is designed to be an expressive, easily understood API, to be learned with little or no previous functional programming experience requirement
--   While Inquiry is opinionated and has many "`Fail`-first" methods, additional methods are provided that allow for a less opinionated usage if desired
+-   While Inquiry is opinionated and has many "`Fail`-first" methods, additional methods are provided that allow for a differently-opinionated usage if desired
 
 # Question, Questionset & Receipt
 
@@ -230,8 +228,6 @@ Note that the descriptive string (e.g., `'is the score higher than 10?'`) in thi
 
 ### Receipt
 
-_Added in 0.28_
-
 This property of Inquiry keeps track of all questions and results in a similar format to Questions:
 
 ```js
@@ -244,8 +240,6 @@ const results = InquiryP.subject(subject)
 console.log(results.join().receipt.inspect());
 // > Receipt(['is it not flagged?', Fail(was flagged)], ['is the score higher than 10?', Pass(score higher than 10)])
 ```
-
-More functionality and options will be built upon this API in future releases.
 
 # `Inquiry` Constructors
 
@@ -277,9 +271,9 @@ If you do not match the object strucutre, this constructor will fall back on con
 
 ### `.inquire(f)`
 
-Pass `inquire` a function `f` that returns either a `Pass`, `Fail`, `Promise` (`InquiryP` only), or another `Inquiry`. Anything other than these will not be aggregated, and a warning will be output to the console.
+Pass `inquire` a `Question`, a string that references a Question within an attached `Questionset`.
 
-When another `Inquiry` is returned back, the `Pass` and `Fail` lists are concatenated into the parent Inquiry `Pass` and `Fail` lists. `Inquiry` can not have child Inquiries that are async-based, but `InquiryP` can have syncronous child Inquiries.
+When another `Inquiry` is returned back, the `Pass` and `Fail` lists are concatenated into the parent Inquiry `Pass` and `Fail` lists. `Inquiry` can not have child-Inquiries that are async based, but `InquiryP` can have syncronous child-Inquiries.
 
 ```js
 const isMoreThanOne = Question.of([
@@ -617,7 +611,7 @@ Run function `f` against an `Array` resulting from a merge of `Pass` and `Fail` 
 
 i.e., "Run the function against a merge of fails and passes."
 
-This may be useful if you'd like to use the `Inquiry` API but do not necessarily care about `Pass` or `Fail` lists, or you may have already handled their positive/negative aspects via other means.
+This may be useful if you'd like to use the `Inquiry` API but do not necessarily care about `Pass` or `Fail` lists, or you may have already handled their dichotomous aspects via other means.
 
 ```js
 const myQuestionset = Questionset.of([
@@ -852,7 +846,7 @@ Inquiry.subject(5)
 
 Swap the `Pass` and `Fail` lists.
 
-This would be useful if you are using `Pass`/`Fail` as a proxy for a less opinionated concept that does not give weight to one side over another.
+This would be useful if you are using `Pass`/`Fail` as a proxy for a differently-opinionated concept that does not give weight to one side over another.
 
 ```js
 // @todo more practical example...
@@ -964,7 +958,7 @@ Source is written in TypeScript. Run tests via `npm run test`.
 
 ## MIT License
 
-Copyright 2018 Robert Gerald Porter <mailto:rob@weeverapps.com>
+Copyright 2018-2019 Robert Gerald Porter <mailto:rob@weeverapps.com>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
 
