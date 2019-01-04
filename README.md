@@ -95,13 +95,7 @@ InquiryP.subject(subjectDataWithFailure)
 ## Get started
 
 ```bash
-npm install inquiry-monad -S
-```
-
-Optionally, if you are using [`fluture`](https://www.npmjs.com/package/fluture) or a compatible Futures library:
-
-```bash
-npm install inquiry-monad-futures -S
+npm install inquiry-monad
 ```
 
 ## Example Demos
@@ -113,11 +107,10 @@ Here are some basic demonstrations of the Inquiry API in use. These projects are
 
 ## Inquiry initial types
 
-There are three initial types of Inquiry:
+There are two initial types of Inquiry:
 
 -   `Inquiry` (syncronous-only)
 -   `InquiryP` (supports Promises)
--   `InquiryF` (supports Futures -- requires `inquiry-monad-futures` to be included)
 
 ## Inquiry result types
 
@@ -125,7 +118,7 @@ There are three result types used in Inquiry:
 
 -   `Pass`: a positive result
 -   `Fail`: a negative result
--   `IOU`: a result to be determined later (relevant to `InquiryP` and `InquiryF` types only)
+-   `IOU`: a result to be determined later (relevant to `InquiryP` types only)
 
 Each of these result types is a monad, and come with built-in methods for handling and exposing their data without mutating the values. See "Monad methods" below for details on how to handle results within these types.
 
@@ -140,7 +133,7 @@ These are also monads, see "Monad methods" below for details on how to handle th
 
 ## Use
 
-_Note that unless otherwise stated in this document, `Inquiry`, `InquiryP`, and `InquiryF` are interchangeable, and mostly share the same API._
+_Note that unless otherwise stated in this document, `Inquiry` and `InquiryP` are interchangeable, and mostly share the same API._
 
 Inquiry can take any _subject_ and test it against various question functions via the `.inquire` method. The question functions should return `Pass` or `Fail` values.
 
@@ -263,7 +256,7 @@ Returns a new `Inquiry` monad, which contains an object with properties `subject
 -   `subject`: the `value` that was passed to `Inquiry.subject`. This value is contained within a `Maybe` monad, meaning it will either be `Just(value)` or `Nothing()`.
 -   `pass`: a `Pass` monad, containing an array of values
 -   `fail`: a `Fail` monad, containing an array of values
--   `iou`: an `IOU` monad, containing an array of Promises or Futures (only relevant with `InquiryP` and `InquiryF`)
+-   `iou`: an `IOU` monad, containing an array of Promises (only relevant with `InquiryP`)
 -   `questionset`: monad, containing an array of functions used to "question" the subject data
 -   `receipt`: monad, containing an array of results from each question
 -   `informant`: a function to be called upon the return of a `.inquire` call, for observation/logging purposes (is set by calling `.informant` method)
@@ -271,26 +264,6 @@ Returns a new `Inquiry` monad, which contains an object with properties `subject
 ## `InquiryP.subject(value)`
 
 Same as the above, however it returns a monad called `InquiryP` which enables function `f` in `.inquire(f)` to return a Promise. This also means that all unwrap methods will be returning a Promise.
-
-## `InquiryF.subject(value)`
-
-Also same, however it returns a monad called `InquiryF` which enables function `f` in `.inquire(f)` to return a Future. Requires `inquiry-monad-futures` to be included.
-
-As a basic example:
-
-```js
-const checkDb = Question.of(
-    'look up something in a db?',
-    x => Future.of(Pass('pretend I looked something up in a db')
-);
-
-const value = { something: true };
-InquiryF.subject(value)
-    .inquire(checkDb)
-    .fork(console.error, console.log);
-
-// console.log >> {subject: Just({something: true}), pass: Pass(['pretend I looked something up in a db']), fail: Fail([]), iou: IOU([]), informant: null, questionset: Questionset(...), receipt: Receipt(...)};
-```
 
 ## `Inquiry.of(inquiry)`
 
@@ -304,9 +277,9 @@ If you do not match the object strucutre, this constructor will fall back on con
 
 ### `.inquire(f)`
 
-Pass `inquire` a function `f` that returns either a `Pass`, `Fail`, `Promise` (`InquiryP` only), `Future` (`InquiryF` only), or another `Inquiry`. Anything other than these will not be aggregated, and a warning will be output to the console.
+Pass `inquire` a function `f` that returns either a `Pass`, `Fail`, `Promise` (`InquiryP` only), or another `Inquiry`. Anything other than these will not be aggregated, and a warning will be output to the console.
 
-When another `Inquiry` is returned back, the `Pass` and `Fail` lists are concatenated into the parent Inquiry `Pass` and `Fail` lists. `Inquiry` can not have child Inquiries that are async-based, but `InquiryP` and `InquiryF` can have syncronous child Inquiries.
+When another `Inquiry` is returned back, the `Pass` and `Fail` lists are concatenated into the parent Inquiry `Pass` and `Fail` lists. `Inquiry` can not have child Inquiries that are async-based, but `InquiryP` can have syncronous child Inquiries.
 
 ```js
 const isMoreThanOne = Question.of([
@@ -368,7 +341,7 @@ Run all questions in the questionset already provided via `.using()`.
 Call function `f` upon each `inquire` result. Useful for logging or observing. The function will be passed an array
 containing `['fnName', Pass('passed value')]` or `['fnName', Fail('failed value')]`.
 
-For `InquiryP` and `InquiryF`, it is not run when the IOU is added, however does run upon resolution of the IOU.
+For `InquiryP`, it is not run when the IOU is added, however does run upon resolution of the IOU.
 
 ```js
 const isMoreThanOne = Question.of([
@@ -424,15 +397,13 @@ The following methods are to be used as a means of "exiting" the Inquiry process
 
 `InquiryP` unwrap methods exit into a Promise.
 
-`InquiryF` unwrap methods _do not exit into a Future_, but you can convert to a promise by unwrapping with `.promise()`.
-
 ### `.join()` (only useful for `Inquiry`)
 
 Returns the contained `Inquiry` object value, without any additional handling.
 
 This is most basic way of returning the values collected by `Inquiry`.
 
-Warning: this can be, but should not be, used with `InquiryP` or `InquiryF` as it will not ensure Promises/Futures have resolved before returning the value. These unresolved Promises/Futures will be contained in the `IOU` list.
+Warning: this can be, but should not be, used with `InquiryP` as it will not ensure Promises have resolved before returning the value. These unresolved Promises will be contained in the `IOU` list.
 
 ```js
 const isMoreThanOne = Question.of([
@@ -462,9 +433,9 @@ console.log(results);
 
 Passes the contained `Inquiry` object value into a function `f`. (You may optionally continue the Inquiry chain by having function `f` return `Inquiry.of(value)` as long as it adheres to the object structure.)
 
-This is useful when you want to convert an Inquiry process chain into a Promise or a Future, or another monad.
+This is useful when you want to convert an Inquiry process chain into a Promise, or another monad.
 
-Warning: In the case of `InquiryP` or `InquiryF`, you will want to use `await` first before using chain (see below), though that requires you to convert into a Promise (or Future).
+Warning: In the case of `InquiryP`, you will want to use `await` first before using chain (see below), though that requires you to convert into a Promise.
 
 ```js
 const myQuestionset = Questionset.of([
@@ -497,7 +468,7 @@ Inquiry.subject(5)
 
 Returns the contained `Inquiry` object value, with map functions `f` and `g` applied to both fail (`f`) and pass (`g`).
 
-For `InquiryP` or `InquiryF`, this method will wait for resolution of all outstanding IOUs (Promises) before applying `f` and `g`.
+For `InquiryP`, this method will wait for resolution of all outstanding IOUs (Promises) before applying `f` and `g`.
 
 i.e. "Run one function for the list of failures, another for the list of passes, and return back everything."
 
@@ -678,11 +649,11 @@ console.log(results);
 // >> [{greaterThanOne: true}, {greaterThanTen: false}]
 ```
 
-### `.await(t)` _(`InquiryP` and `InquiryF` only)_
+### `.await(t)` _(`InquiryP` only)_
 
 `t` is optional.
 
-After resolving all outstanding IOUs or waiting for time `t`, returns a Promise or Future containing the Inquiry with either all IOUs resolved or a timeout under the `Fail` list.
+After resolving all outstanding IOUs or waiting for time `t`, returns a Promise containing the Inquiry with either all IOUs resolved or a timeout under the `Fail` list.
 
 i.e., "Wait for everything to finish, then continue."
 
@@ -733,7 +704,7 @@ e.g.
     });
 ```
 
-The `InquiryP` and `InquiryF` versions of this will wait for outstanding IOUs to resolve.
+The `InquiryP` versions of this will wait for outstanding IOUs to resolve.
 
 Useful if you'd like to handle `Fail` results early for some reason, such as throwing a fatal error or notifying an external stakeholder.
 
@@ -794,7 +765,7 @@ e.g.
     });
 ```
 
-The `InquiryP` and `InquiryF` versions of this will wait for outstanding IOUs to resolve.
+The `InquiryP` versions of this will wait for outstanding IOUs to resolve.
 
 Useful if you'd like to handle `Pass` results early for some reason.
 
@@ -844,7 +815,7 @@ Inquiry.subject(5)
 
 Run a function `f` against both `Pass` and `Fail` lists.
 
-Note that in the case of `InquiryP` and `InquiryF` items in the IOU list will be missed, unless resolved via `.await` easlier. This does currently bury the Inquiry in a Promise layer, however.
+Note that in the case of `InquiryP` items in the IOU list will be missed, unless resolved via `.await` easlier. This does currently bury the Inquiry in a Promise layer, however.
 
 ```js
 const myQuestionset = Questionset.of([
@@ -919,7 +890,7 @@ These methods can be used against any monads in this API: `Inquiry`, `Pass`, `Fa
 
 Taking a function `f`, apply the contained value and return the result in the same type of monad.
 
-NOTE: You should only be using this on `Inquiry`/`InquiryP`/`InquiryF` if you have a good understanding of their type structure, as this is a function where it is very easy to break things.
+NOTE: You should only be using this on `Inquiry`/`InquiryP` if you have a good understanding of their type structure, as this is a function where it is very easy to break things.
 
 ```js
 const R = require('ramda');
