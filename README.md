@@ -6,92 +6,60 @@ Inquiry is an expressive API that allows one ask multiple questions about a subj
 
 It is most useful for validating data against any number of expectations, especially if you would like to fully understand why something does not validate, or handle cases of partial validation.
 
+Inquiry's style is much like a unit test, which should look familar, but you may not be used to seeing it outside of unit test files.
+
 ## Basic examples
 
 ```js
-const {
-    Inquiry,
-    InquiryP,
-    Pass,
-    Fail,
-    Questionset,
-    Question
-} = require('inquiry-monad');
+const { Inquiry, Pass, Fail, Questionset } = require('inquiry-monad');
 
-const subjectData = {
-    a: 1,
-    b: false
+const studentData = {
+    name: 'Jake Myers',
+    age: 15,
+    grades: {
+        math: 76,
+        physics: 44
+    },
+    reprimands: []
 };
 
 const myQuestionset = Questionset.of([
-    ['does it have a?', x => (x.a ? Pass('has a') : Fail('does not have a'))],
     [
-        'is b valid?',
-        x =>
-            x.b && typeof x.b === 'boolean'
-                ? Pass('b is valid')
-                : Fail('b is invalid')
+        'student name is present?',
+        x => (x.name ? Pass('Name has been entered') : Fail('Name not entered'))
     ],
     [
-        'is it missing the c value?',
-        x => (x.c ? Fail('has a c value') : Pass('has no c value'))
+        'student passed math?',
+        x =>
+            x.grades && x.grades.math > 49
+                ? Pass('Passed math course')
+                : Fail('Failed math course')
+    ],
+    [
+        'student passed biology?',
+        x =>
+            x.grades && x.grades.biology > 49
+                ? Pass('Passed biology course')
+                : Fail('Failed biology course')
+    ],
+    [
+        'student has reprimands?',
+        x =>
+            x.reprimands.length > 0
+                ? Fail('student has reprimands')
+                : Pass('student has no reprimands')
     ]
 ]);
 
-/* With all passes */
-Inquiry.subject(subjectData)
-    .using(myQuestionset)
-    .inquire('does it have a?')
-    .inquire('is b valid?')
-    .inquire('is it missing the c value?')
-    .inquire(
-        // you can also make an inquiry as a one-off question
-        Question.of([
-            'is it missing the d value?',
-            x => (x.d ? Pass('is no d value') : Fail('has a d value'))
-        ])
-    )
-    .join();
-
-// questionset & receipt have been abbreviated
-// result: {subject: {a:1, b:false}, pass: Pass(['has a', 'b is valid', 'has no c value', 'has no d value']), fail: Fail([]), iou: IOU([]), questionset: Questionset(...), receipt: Receipt(...)}
-
-/* subject with failures */
-const subjectDataWithFailure = {
-    a: 1,
-    b: 'string',
-    c: true
-};
-
-Inquiry.subject(subjectDataWithFailure)
+const result = Inquiry.subject(subjectData)
     .using(myQuestionset)
     .inquireAll()
     .join();
 
-// result: {subject: {a:1, b:'string', c:true}, pass: Pass(['has a']), fail: Fail(['b is invalid', 'has c value']), iou: IOU(), questionset: Questionset(...), receipt: Receipt(...)}
+console.log(result);
 
-/* With async (Promises) */
-const checkDb = async x =>
-    Promise.resolve(Pass('pretend I looked something up in a db'));
-
-// we can use .concat to merge two Questionsets
-const myAsyncQuestionset = myQuestionset.concat(
-    Questionset.of([
-        [
-            'look something up in a db',
-            async x =>
-                Promise.resolve(Pass('pretend I looked something up in a db'))
-        ]
-    ])
-);
-
-InquiryP.subject(subjectDataWithFailure)
-    .using(myQuestionset)
-    .inquireAll()
-    .conclude(x => x, y => y);
-// .conclude or another "unwrap" function is necessary to complete "IOUs" to give a clean exit (i.e., resolve all unresolved Promises)
-
-// result: Promise.resolve(result: {subject: {a:1, b:'string', c:true}, pass: Pass(['has a', 'pretend I looked something up in a db']), fail: Fail(['b is invalid', 'has c value']), iou: IOU()}, questionset: Questionset(...), receipt: Receipt(...))
+// (questionset & receipt have been abbreviated below)
+// result: {subject: {name: "Jake Myers", age: 15, grades: {…}, reprimands: Array(0)}, pass: Pass(['Name has been entered', 'Passed math course', 'student has no reprimands']), fail: Fail(['Failed biology course']), iou: IOU([]), questionset: Questionset(...), receipt: Receipt(...)}
 ```
 
 ## Get started
@@ -184,11 +152,13 @@ const myQuestionset = Questionset.of([
     ]
 ]);
 
+// instead of `.inquireAll()` you may opt in, one-by-one using the given string
 const results = Inquiry.subject('A short sentence.')
     .using(myQuestionset)
     .inquire('does it start with a capital letter?')
     .inquire('are there more than ten words?')
     // the below call will be skipped since no function has this identifier, and will throw a console.warning()
+    // this is a lot like calling a software test that doesn't have assertion code yet, it'll warn you, but not break functionality
     .inquire('does it start with an indefinite article?')
     .inquire('are there any line breaks?');
 ```
@@ -909,7 +879,7 @@ const filterPass = inq => {
 const qset = Questionset.of([
     ['pass one', x => Pass(1)],
     ['pass two', x => Pass(2)]
-])
+]);
 
 const result = Inquiry.subject('something')
     .using(qset)

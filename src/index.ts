@@ -54,6 +54,7 @@ const IOU = (x: QuestionMonad | Array<QuestionMonad>): IOUMonad => ({
     ap: (y: Monad): Monad => y.map(x),
     inspect: (): string => `IOU(${x})`,
     join: (): QuestionMonad | Array<QuestionMonad> => x,
+    emit: (): QuestionMonad | Array<QuestionMonad> => x,
     concat: (o: IOUMonad): IOUMonad =>
         o.chain(
             (r: any): IOUMonad => IOU((x as Array<QuestionMonad>).concat(r))
@@ -78,6 +79,7 @@ const Pass = <T>(x: Array<T> | T): PassMonad => ({
     tail: (): Array<T> | T =>
         Array.isArray(x) && x.length ? x[x.length - 1] : [],
     join: (): Array<T> | T => x,
+    emit: (): Array<T> | T => x,
     inspect: (): string => `Pass(${x})`,
     concat: (o: PassFailMonad): PassFailMonad =>
         o.fold((r: any): PassMonad => Pass((x as Array<T>).concat(r)), noop),
@@ -115,6 +117,7 @@ const Fail = <T>(x: Array<T> | T): FailMonad => ({
     tail: (): Array<T> | T =>
         Array.isArray(x) && x.length ? x[x.length - 1] : [],
     join: (): Array<T> | T => x,
+    emit: (): Array<T> | T => x,
     inspect: (): string => `Fail(${x})`,
     concat: (o: PassFailMonad): PassFailMonad =>
         o.fork((r: any): FailMonad => Fail((x as Array<T>).concat(r)), noop),
@@ -151,6 +154,7 @@ const Receipt = (x: Array<ReceiptValue>): ReceiptMonad => ({
     head: (): ReceiptValue => x[0],
     tail: (): ReceiptValue => x[x.length - 1],
     join: (): Array<ReceiptValue> => x,
+    emit: (): Array<ReceiptValue> => x,
     inspect: (): string => `Receipt(${x})`,
     isEmpty: (): Boolean => Boolean(!Array.isArray(x) || x.length === 0),
     concat: (o: ReceiptMonad): ReceiptMonad =>
@@ -175,6 +179,7 @@ const Question = (x: QuestionValue): QuestionMonad => ({
     ap: (y: Monad): Monad => y.map(x),
     inspect: (): string => `Question(${x})`,
     join: (): any => x,
+    emit: (): any => x,
     call: (i: InquiryMonad): PassFailMonad => x[1](i.join().subject.join()),
     extract: (): Function => x[1],
     name: (): string | RegExp => x[0],
@@ -194,6 +199,7 @@ const Questionset = (x: Array<QuestionValue>): QuestionsetMonad => ({
     ap: (y: Monad): Monad => y.map(x),
     inspect: (): string => `Questionset(${x})`,
     join: (): any => x,
+    emit: (): any => x,
     concat: (o: QuestionsetMonad): QuestionsetMonad =>
         o.chain(
             (r: any): QuestionsetMonad =>
@@ -415,6 +421,7 @@ const Inquiry = (x: InquiryValue): InquiryMonad => ({
     ap: (y: Monad): Monad => y.map(x),
     chain: (f: Function): any => f(x),
     join: (): InquiryValue => x,
+    emit: (): InquiryValue => x,
 
     // execute the provided function if there are failures, else continue
     breakpoint: (f: Function): InquiryMonad =>
@@ -727,6 +734,7 @@ const InquiryP = (x: InquiryValue): InquiryMonad => ({
     ap: (y: Monad): Monad => y.map(x),
     chain: (f: Function): any => f(x),
     join: (): InquiryValue => x,
+    emit: (): InquiryValue => x,
 
     // execute the provided function if there are failures, else continue
     breakpoint: (f: Function): InquiryMonad =>
